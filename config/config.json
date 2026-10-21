@@ -1,0 +1,66 @@
+{
+  "exchange": {
+    "name": "binance",
+    "base": "BTC",
+    "quote": "USDT",
+    "request_timeout_s": 15.0,
+    "max_retries": 4,
+    "min_request_interval_s": 0.25
+  },
+  "data": {
+    "timeframes": ["1d", "4h"],
+    "history_start": "2017-08-17",
+    "db_path": "data/btcbot.sqlite3",
+    "max_gap_bars": 2,
+    "candle_cache_dir": "data/candles"
+  },
+  "costs": {
+    "taker_fee_bps": 10.0,
+    "maker_fee_bps": 10.0,
+    "spread_bps": 2.0,
+    "slippage_bps": 5.0,
+    "min_notional": 10.0,
+    "qty_step": 0.00001,
+    "price_tick": 0.01
+  },
+  "risk": {
+    "risk_per_trade_pct": 0.5,
+    "max_position_pct": 20.0,
+    "max_positions": 1,
+    "daily_loss_limit_pct": 2.0,
+    "max_drawdown_pct": 10.0,
+    "consecutive_losses_limit": 3,
+    "cooldown_hours": 24.0,
+    "leverage": 1,
+    "max_bars_stale": 2,
+    "max_abs_bar_return": 0.35,
+    "min_stop_distance_pct": 1.0,
+    "max_stop_distance_pct": 25.0,
+    "entry_gap_buffer_pct": 1.0
+  },
+  "backtest": {
+    "initial_equity": 10000.0,
+    "start": null,
+    "end": null,
+    "include_benchmarks": true
+  },
+  "paper": {
+    "initial_equity": 10000.0,
+    "strategy": "ema_std",
+    "strategy_params": {},
+    "timeframe": "1d",
+    "poll_seconds": 60,
+    "replay_bars": 0,
+    "warmup_bars": 120,
+    "resume_on_start": true
+  },
+  "api": {
+    "host": "127.0.0.1",
+    "port": 8601
+  },
+  "trading": {
+    "mode": "paper",
+    "enable_live_orders": false
+  },
+  "log_level": "INFO"
+}

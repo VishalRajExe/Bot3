@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BTC Research &amp; Paper Trading</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="vendor/lightweight-charts.standalone.production.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">₿</span>
+      <span>BTC Research <span class="muted">/ paper trading</span></span>
+    </div>
+    <div class="spot">
+      <span id="spotPrice" class="spot-price">—</span>
+      <span id="spotMeta" class="muted small">connecting…</span>
+    </div>
+    <div class="badges">
+      <span class="badge badge-warn" title="This system never sends real exchange orders">PAPER ONLY</span>
+      <span class="badge badge-warn" id="replayBadge" hidden title="This session was seeded by replaying closed historical bars. Those fills are historical simulations, not live performance.">REPLAY-SEEDED</span>
+      <span class="badge" id="healthBadge">…</span>
+      <span class="badge" id="loopBadge">loop: —</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-view="dashboard" role="tab">Dashboard</button>
+    <button class="tab" data-view="research" role="tab">Research</button>
+    <button class="tab" data-view="journal" role="tab">Journal</button>
+    <button class="tab" data-view="learning" role="tab">Learning</button>
+    <button class="tab" data-view="sentiment" role="tab">Sentiment</button>
+    <button class="tab" data-view="controls" role="tab">Controls</button>
+  </nav>
+
+  <main>
+    <!-- ============================== DASHBOARD ============================== -->
+    <section id="view-dashboard" class="view">
+      <div class="cards" id="dashCards"></div>
+
+      <div class="panel chart-panel">
+        <div class="panel-head">
+          <div>
+            <h2>BTC/USDT <span class="muted small" id="chartTfLabel">1d</span></h2>
+            <div class="muted small" id="chartNote">loading market data…</div>
+          </div>
+          <div class="seg" id="tfButtons"></div>
+        </div>
+        <div id="chart" class="chart"></div>
+        <div class="legend">
+          <span><i class="swatch ema"></i>EMA 65</span>
+          <span><i class="swatch band"></i>±1σ / ±2σ</span>
+          <span><i class="swatch up"></i>entry</span>
+          <span><i class="swatch down"></i>exit</span>
+          <span class="muted">Click a marker or a trade row for details.</span>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-head"><h3>Recent decisions</h3><span class="muted small">stored signals</span></div>
+          <div id="signalList" class="list"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Trade detail</h3><span class="muted small" id="tradeDetailMode"></span></div>
+          <div id="tradeDetail" class="detail muted">Select a trade marker or row.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Simulated results</h3>
+          <span class="muted small" id="perfSource">backtest</span>
+        </div>
+        <div class="cards compact" id="perfCards"></div>
+        <div id="perfChart" class="spark"></div>
+      </div>
+    </section>
+
+    <!-- =============================== RESEARCH ============================== -->
+    <section id="view-research" class="view" hidden>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h3>Backtest runs</h3>
+            <div class="muted small">Every row is a reproducible run with a stored dataset hash and cost model.</div>
+          </div>
+          <button class="btn ghost" id="refreshRuns">Refresh</button>
+        </div>
+        <div class="table-wrap"><table id="runsTable" class="table"></table></div>
+      </div>
+
+      <div class="panel" id="runDetailPanel" hidden>
+        <div class="panel-head">
+          <h3 id="runTitle">Run</h3>
+          <span class="muted small" id="runPeriod"></span>
+        </div>
+        <div class="cards compact" id="runCards"></div>
+        <div class="two-col">
+          <div>
+            <h4>Equity &amp; drawdown</h4>
+            <div id="runEquity" class="spark"></div>
+          </div>
+          <div>
+            <h4>Benchmark comparison</h4>
+            <div id="runBench"></div>
+          </div>
+        </div>
+        <h4>Trades <span class="muted small" id="runTradeCount"></span></h4>
+        <div class="table-wrap"><table id="runTrades" class="table"></table></div>
+        <details class="params"><summary>Strategy parameters &amp; risk model</summary><pre id="runParams"></pre></details>
+      </div>
+    </section>
+
+    <!-- =============================== JOURNAL =============================== -->
+    <section id="view-journal" class="view" hidden>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Trade journal</h3>
+          <div class="seg" id="journalMode">
+            <button data-mode="paper" class="active">paper</button>
+            <button data-mode="backtest">backtest</button>
+          </div>
+        </div>
+        <div class="cards compact" id="journalCards"></div>
+        <div class="note" id="journalNote"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Completed trades</h3><span class="muted small" id="journalCount"></span></div>
+        <div class="table-wrap"><table id="journalTable" class="table"></table></div>
+      </div>
+      <div class="two-col">
+        <div class="panel">
+          <h3>Findings <span class="muted small">(heuristic, not automatic changes)</span></h3>
+          <div id="findings" class="list"></div>
+        </div>
+        <div class="panel">
+          <h3>Risk events</h3>
+          <div id="riskEvents" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============================== LEARNING ============================== -->
+    <section id="view-learning" class="view" hidden>
+      <div class="panel">
+        <div class="panel-head"><h3>Experiments</h3><span class="muted small">accepted = worth paper-trading, never "proven"</span></div>
+        <div class="table-wrap"><table id="expTable" class="table"></table></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Model registry</h3><span class="muted small">no automatic promotion</span></div>
+        <div class="table-wrap"><table id="modelTable" class="table"></table></div>
+        <div class="note" id="promotionNote"></div>
+      </div>
+      <div class="two-col">
+        <div class="panel"><h3>Stored reviews</h3><div id="reviews" class="list"></div></div>
+        <div class="panel"><h3>Recent errors</h3><div id="errors" class="list"></div></div>
+      </div>
+    </section>
+
+    <!-- ============================== SENTIMENT ============================== -->
+    <section id="view-sentiment" class="view" hidden>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Sentiment research</h3>
+          <button class="btn ghost" id="refreshSentiment">Refresh feeds</button>
+        </div>
+        <div class="note" id="sentNote"></div>
+        <div class="cards compact" id="sentCards"></div>
+      </div>
+      <div class="panel">
+        <h3>Latest headlines</h3>
+        <div class="muted small">Headlines are stored locally with source links for context only. Not a trading input.</div>
+        <div id="headlines" class="list"></div>
+      </div>
+    </section>
+
+    <!-- =============================== CONTROLS ============================== -->
+    <section id="view-controls" class="view" hidden>
+      <div class="two-col">
+        <div class="panel">
+          <h3>Paper session</h3>
+          <p class="muted small">Signals are generated on closed candles and simulated against the live public quote.
+            No API key is used and no exchange order can be sent.</p>
+          <div class="form-row">
+            <label for="replayBars">Replay closed bars first</label>
+            <input id="replayBars" type="number" min="0" max="2000" value="0" />
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="btnStart">Start paper trading</button>
+            <button class="btn" id="btnPause">Pause entries</button>
+            <button class="btn" id="btnResume">Resume</button>
+            <button class="btn" id="btnTick">Poll once</button>
+            <button class="btn danger" id="btnStop">Stop session</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn ghost" id="btnResetDd">Reset drawdown breaker</button>
+            <a class="btn ghost" href="/api/export" download="btcbot-export.json">Export research JSON</a>
+          </div>
+          <div id="controlStatus" class="note"></div>
+        </div>
+
+        <div class="panel">
+          <h3>Run a backtest</h3>
+          <div class="form-row"><label for="btStrategy">Strategy</label><select id="btStrategy"></select></div>
+          <div class="form-row"><label for="btTimeframe">Timeframe</label><select id="btTimeframe"></select></div>
+          <div class="form-row"><label for="btStart">Start (optional)</label><input id="btStart" type="date" /></div>
+          <div class="form-row"><label for="btEnd">End (optional)</label><input id="btEnd" type="date" /></div>
+          <div class="form-row"><label for="btParams">Params (JSON)</label><textarea id="btParams" rows="3" spellcheck="false">{}</textarea></div>
+          <div class="btn-row"><button class="btn primary" id="btnBacktest">Run backtest</button></div>
+          <div id="btResult" class="note"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Risk limits <span class="muted small">(read-only in the UI)</span></h3>
+        <div class="cards compact" id="configCards"></div>
+        <div class="note">
+          Real-money execution is not implemented. Leverage is fixed at 1 and cannot be enabled
+          from configuration. Changing limits requires editing <code>config/config.json</code>
+          and restarting, and every change is visible in run metadata.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+</body>
+</html>

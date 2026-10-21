@@ -1,0 +1,40 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Freebuff workspace metadata
+.freebuff/
+
+# Runtime state / data (regenerable via `python -m btcbot.cli fetch`)
+data/*.sqlite3
+data/*.sqlite3-journal
+data/*.sqlite3-wal
+data/*.sqlite3-shm
+data/candles/*.parquet
+data/candles/*.csv
+data/cache/
+
+# Secrets
+.env
+.env.local
+
+# Logs and process files
+logs/*.log
+logs/*.pid
+*.pid
+reports/*.log
+
+# Per-run research artifacts (regenerable; curated results live in
+# reports/backtests/comparison.md and reports/experiments.md)
+reports/backtests/*/
+reports/charts/*.html
+reports/models/
+
+# Generated paper-session snapshots
+reports/paper_status.json
+reports/start_response.json
+
+# Large regenerable export (rebuild with `python -m btcbot.cli export`)
+reports/research_bundle.json
