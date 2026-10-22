@@ -1189,13 +1189,13 @@ function renderRunKpis(m, d) {
   if (!container) return;
   const kpis = [
     { label:"Net return",   value: fmtPct(m.net_return_pct,2), cls: signPnl(m.net_return_pct) },
-    { label:"Ann. return",  value: fmtPct(m.annualized_return_pct,2), cls: signPnl(m.annualized_return_pct) },
+    { label:"Ann. return",  value: fmtPct(m.cagr_pct ?? m.annualized_return_pct, 2), cls: signPnl(m.cagr_pct ?? m.annualized_return_pct) },
     { label:"Max drawdown", value: fmtPct(-(m.max_drawdown_pct||0),2), cls:"negative" },
     { label:"Sharpe",       value: fmt(m.sharpe,3), cls: (m.sharpe||0)>=0?"positive":"negative" },
     { label:"Sortino",      value: fmt(m.sortino,3), cls:"" },
     { label:"Win rate",     value: fmtPct(m.win_rate_pct,1), cls: (m.win_rate_pct||0)>=50?"positive":"negative" },
     { label:"Profit factor",value: fmt(m.profit_factor,2), cls: (m.profit_factor||0)>=1?"positive":"negative" },
-    { label:"Trades",       value: m.n_trades||0, cls:"" },
+    { label:"Trades",       value: m.trades ?? m.n_trades ?? 0, cls:"" },
     { label:"Total fees",   value: fmtMoney(m.total_fees), cls:"" },
     { label:"Exposure",     value: fmtPct(m.exposure_pct,1), cls:"" },
   ];
