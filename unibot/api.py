@@ -82,13 +82,15 @@ def create_app(settings: Settings | None = None, *, db_path: str | None = None,
             "SELECT COUNT(*) FROM trades WHERE mode='live' AND net_pnl > 0") or 0
         recon = store.latest_recon() or {}
         marks = {}
+        live_prices = {}
         try:
             creds = load_credentials(".env")
             client = AlpacaClient(creds.alpaca_key, creds.alpaca_secret,
                                   paper_base=creds.alpaca_base_url,
                                   data_base=settings.alpaca.data_base_url)
             acct = client.account()
-            marks = client.latest_prices([p["symbol"] for p in positions]) if positions else {}
+            live_prices = client.latest_prices(settings.symbols)
+            marks = {s: d for s, d in live_prices.items() if s in [p["symbol"] for p in positions]}
         except Exception:
             acct = {}
         unrealized = 0.0
@@ -142,6 +144,7 @@ def create_app(settings: Settings | None = None, *, db_path: str | None = None,
             "max_drawdown_pct": round(float(breakers.get("max_dd") or 0), 3),
             "capital": settings.capital,
             "risk_config": settings.risk.model_dump(),
+            "latest_prices": {s: d.get("price") for s, d in live_prices.items() if d.get("price")},
             "regime_ts": regime.get("ts"),
             # Equity history for sparkline (last 90 snapshots)
             "equity_history": [

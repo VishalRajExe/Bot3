@@ -219,7 +219,8 @@ main { flex: 1; padding: 1.25rem 1.5rem; max-width: 1800px; margin: 0 auto; widt
 .board-card .bc-sig  { font-size: .65rem; font-weight: 600; padding: .1em .45em; border-radius: 3px; }
 .board-card .bc-sig.enter { background: rgba(34,197,94,.2); color: var(--green); }
 .board-card .bc-sig.exit  { background: rgba(239,68,68,.2); color: var(--red); }
-.board-card .bc-sig.hold  { background: rgba(100,116,139,.2); color: var(--text3); }
+.board-card .bc-sig.hold  { background: rgba(245,158,11,.2); color: var(--amber); }
+.board-card .bc-sig.flat  { background: rgba(100,116,139,.2); color: var(--text3); }
 .board-card .bc-prob { font-size: .65rem; color: var(--text3); }
 .badge-live { font-size: .65rem; color: var(--text3); }
 
@@ -248,7 +249,8 @@ main { flex: 1; padding: 1.25rem 1.5rem; max-width: 1800px; margin: 0 auto; widt
 .feed-row .fr-act  { font-weight: 600; min-width: 70px; }
 .feed-row .fr-act.buy  { color: var(--green); }
 .feed-row .fr-act.sell { color: var(--red); }
-.feed-row .fr-act.hold { color: var(--text3); }
+.feed-row .fr-act.hold { color: var(--amber); }
+.feed-row .fr-act.flat { color: var(--text3); }
 .feed-row .fr-reason { flex: 1; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .feed-row .fr-time { color: var(--text3); flex-shrink: 0; font-family: var(--mono); }
 

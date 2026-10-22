@@ -626,9 +626,17 @@ class LiveEngine:
                                              > self.s.telegram.hold_digest_minutes * 60):
             rows_to_send = hold_rows or getattr(self, "_latest_hold_rows", []) or decisions_this_cycle
             if rows_to_send:
-                self.notifier.hold_digest(rows_to_send, equity=equity,
+                strat_map = {s.symbol: s.strategy for s in self.s.universe}
+                pos_syms = {p["symbol"] for p in pos_rows}
+                enriched = []
+                for r in rows_to_send:
+                    rc = dict(r)
+                    rc["is_position"] = rc["symbol"] in pos_syms
+                    enriched.append(rc)
+                self.notifier.hold_digest(enriched, equity=equity,
                                           open_positions=len(self.store.positions()),
-                                          regime=regime.label)
+                                          regime=regime.label,
+                                          strategy_map=strat_map)
                 self._last_hold_digest = now
         if now - self._last_heartbeat > 6 * 3600:
             self.notifier.heartbeat(equity=equity, open_positions=len(self.store.positions()),

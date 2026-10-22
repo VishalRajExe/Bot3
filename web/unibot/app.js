@@ -19,9 +19,9 @@ const SYM_SHORT = {
   "LTC/USD":"LTC","DOGE/USD":"DOGE"
 };
 const ACTION_ICON = {
-  enter_long:"🟢", exit_long:"🔴", hold:"⚪",
-  buy_signal:"🟡", buy_filled:"✅", exit_filled:"🔴",
-  blocked:"🚫", stop_filled:"🛑"
+  enter_long: "🟢", buy_signal: "🟢", buy_filled: "🟢",
+  exit_long: "🔴", exit_filled: "🔴", stop_filled: "🔴",
+  flat: "⚪", hold: "🟡", blocked: "🚫"
 };
 const REGIME_COLOR = { bull:"#22c55e", bear:"#ef4444", chop:"#f59e0b", unknown:"#94a3b8" };
 
@@ -250,6 +250,7 @@ function renderBoard(d) {
   if (!container) return;
   const positions = {};
   (d.positions || []).forEach(p => positions[p.symbol] = p);
+  const latestPrices = d.latest_prices || {};
   const decisions = {};
   (state.decisions || []).slice(0, SYMBOLS.length * 3).forEach(dec => {
     if (!decisions[dec.symbol]) decisions[dec.symbol] = dec;
@@ -258,18 +259,34 @@ function renderBoard(d) {
   SYMBOLS.forEach(sym => {
     const pos = positions[sym];
     const dec = decisions[sym];
-    const price = pos ? pos.current_price : (dec ? dec.price : null);
-    const action = dec ? dec.action : "hold";
-    let sigCls = "hold", sigText = "WATCH";
-    if (action === "enter_long" || action === "buy_signal") { sigCls="enter"; sigText="ENTRY"; }
-    else if (action === "exit_long" || action === "exit_filled") { sigCls="exit"; sigText="EXIT"; }
-    else if (action === "buy_filled") { sigCls="enter"; sigText="LONG"; }
+    const livePx = latestPrices[sym];
+    const price = livePx != null ? livePx : (pos ? pos.current_price : (dec ? dec.price : null));
+    
+    let sigCls = "flat", sigText = "FLAT", sigDot = "⚪";
+    if (pos) {
+      sigCls = "hold";
+      sigText = "HOLD";
+      sigDot = "🟡";
+    } else if (dec?.action === "enter_long" || dec?.action === "buy_signal" || dec?.action === "buy_filled") {
+      sigCls = "enter";
+      sigText = "BUY";
+      sigDot = "🟢";
+    } else if (dec?.action === "exit_long" || dec?.action === "exit_filled" || dec?.action === "stop_filled") {
+      sigCls = "exit";
+      sigText = "SOLD";
+      sigDot = "🔴";
+    } else {
+      sigCls = "flat";
+      sigText = "FLAT";
+      sigDot = "⚪";
+    }
+
     const card = document.createElement("div");
     card.className = `board-card${sym===state.selectedSymbol?" selected":""}${pos?" has-position":""}`;
     card.dataset.sym = sym;
-    const pnlPct = pos ? ((pos.current_price - pos.entry_price) / pos.entry_price * 100) : null;
+    const pnlPct = pos ? ((price - pos.entry_price) / pos.entry_price * 100) : null;
     card.innerHTML = `
-      <div class="bc-sym">${SYM_SHORT[sym]||sym}${pos?" <span style='color:var(--green);font-size:.65rem'>●</span>":""}</div>
+      <div class="bc-sym">${SYM_SHORT[sym]||sym} <span style="font-size:.65rem">${sigDot}</span></div>
       <div class="bc-price">${price ? (price < 1 ? price.toFixed(5) : price.toLocaleString("en",{maximumFractionDigits:2})) : "—"}</div>
       ${pnlPct != null ? `<div class="bc-change ${pnlPct>=0?"up":"dn"}">${fmtPct(pnlPct,2)}</div>` : ""}
       <div class="bc-row">
@@ -446,15 +463,38 @@ function renderFeed() {
   const container = $("decisions");
   if (!container) return;
   const rows = (state.decisions || []).slice(0, MAX_FEED_ROWS);
+  const openSyms = new Set((state.overview?.positions || []).map(p => p.symbol));
+
   container.innerHTML = rows.map(d => {
-    const icon = ACTION_ICON[d.action] || "ℹ️";
-    const actCls = d.action.includes("long") || d.action.includes("buy") ? "buy"
-                 : d.action.includes("exit") || d.action.includes("stop") ? "sell"
-                 : "hold";
+    let icon = "⚪";
+    let actText = "FLAT";
+    let actCls = "flat";
+
+    if (d.action.includes("long") || d.action.includes("buy")) {
+      icon = "🟢";
+      actText = "BUY";
+      actCls = "buy";
+    } else if (d.action.includes("exit") || d.action.includes("stop") || d.action.includes("sold")) {
+      icon = "🔴";
+      actText = "SOLD";
+      actCls = "sell";
+    } else if (d.action === "hold" && openSyms.has(d.symbol)) {
+      icon = "🟡";
+      actText = "HOLD";
+      actCls = "hold";
+    } else if (d.action === "hold") {
+      icon = "⚪";
+      actText = "FLAT";
+      actCls = "flat";
+    } else {
+      icon = ACTION_ICON[d.action] || "⚪";
+      actText = d.action.replace("_", " ").toUpperCase();
+    }
+
     return `<div class="feed-row anim-in">
       <span class="fr-icon">${icon}</span>
       <span class="fr-sym">${SYM_SHORT[d.symbol]||d.symbol}</span>
-      <span class="fr-act ${actCls}">${d.action.replace("_"," ")}</span>
+      <span class="fr-act ${actCls}">${actText}</span>
       <span class="fr-reason" title="${(d.reason||"").replace(/"/g,"'")}">
         ${(d.reason||"").slice(0,90)}
       </span>

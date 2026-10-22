@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -29,20 +30,21 @@ from collections import deque
 log = logging.getLogger(__name__)
 
 ACTION_ICON = {
-    "buy_signal": "\U0001F7E2",       # green circle
-    "buy_submitted": "\U0001F535",    # blue circle
-    "buy_filled": "\u2705",           # check mark
-    "hold": "\u26AA",                 # white circle
-    "exit_signal": "\U0001F534",      # red circle
-    "exit_submitted": "\U0001F535",   # blue circle
-    "exit_filled": "\U0001F4B0",      # money bag (profit)
-    "stop_filled": "\U0001F6D1",      # stop sign
-    "blocked": "\U0001F6AB",          # no entry
-    "watch": "\U0001F440",            # eyes
-    "risk": "\u26A0\uFE0F",           # warning
-    "breaker": "\U0001F6A8",          # rotating beacon
-    "portfolio": "\U0001F4C8",        # chart increasing
-    "positions": "\U0001F4CA",        # bar chart
+    "buy_signal": "\U0001F7E2",       # green circle 🟢
+    "buy_submitted": "\U0001F535",    # blue circle 🔵
+    "buy_filled": "\U0001F7E2",       # green circle 🟢
+    "flat": "\u26AA",                 # white circle ⚪
+    "hold": "\U0001F7E1",             # yellow circle 🟡
+    "exit_signal": "\U0001F534",      # red circle 🔴
+    "exit_submitted": "\U0001F535",   # blue circle 🔵
+    "exit_filled": "\U0001F534",      # red circle 🔴
+    "stop_filled": "\U0001F6D1",      # stop sign 🛑
+    "blocked": "\U0001F6AB",          # no entry 🚫
+    "watch": "\U0001F440",            # eyes 👀
+    "risk": "\u26A0\uFE0F",           # warning ⚠️
+    "breaker": "\U0001F6A8",          # rotating beacon 🚨
+    "portfolio": "\U0001F4C8",        # chart increasing 📈
+    "positions": "\U0001F4CA",        # bar chart 📊
 }
 
 
@@ -77,7 +79,7 @@ def _format_duration(hours: float) -> str:
 
 class TelegramNotifier:
     def __init__(self, token: str, chat_id: str, *, enabled: bool = True,
-                 rate_limit_per_minute: int = 18, store=None,
+                 rate_limit_per_minute: int = 60, store=None,
                  dedup_window_seconds: int = 600) -> None:
         self.token = token
         self.chat_id = chat_id
@@ -123,6 +125,7 @@ class TelegramNotifier:
         payload = urllib.parse.urlencode({
             "chat_id": self.chat_id,
             "text": text[:4000],
+            "parse_mode": "HTML",
             "disable_web_page_preview": "true",
         }).encode()
 
@@ -135,9 +138,29 @@ class TelegramNotifier:
                 if self.store:
                     self.store.log_alert(kind=kind, symbol=symbol, text=text, delivered=ok)
                 return bool(ok)
+            except urllib.error.HTTPError as exc:
+                if exc.code == 400:
+                    try:
+                        clean_text = re.sub(r"<[^>]+>", "", text)
+                        fallback_payload = urllib.parse.urlencode({
+                            "chat_id": self.chat_id,
+                            "text": clean_text[:4000],
+                            "disable_web_page_preview": "true",
+                        }).encode()
+                        with urllib.request.urlopen(url, data=fallback_payload, timeout=20) as resp:
+                            ok = json.loads(resp.read()).get("ok", False)
+                        self._sent.append(time.monotonic())
+                        self._last_sent_hashes[dedup_key] = now
+                        if self.store:
+                            self.store.log_alert(kind=kind, symbol=symbol, text=clean_text, delivered=ok)
+                        return bool(ok)
+                    except Exception:
+                        pass
+                log.warning("telegram send failed HTTP (%s/%s): %s", attempt + 1, retries, exc)
+                time.sleep(min(2 ** attempt, 4))
             except Exception as exc:
                 log.warning("telegram send failed (%s/%s): %s", attempt + 1, retries, exc)
-                time.sleep(min(2 ** attempt, 6))
+                time.sleep(min(2 ** attempt, 4))
 
         self._failures += 1
         if self.store:
@@ -296,31 +319,54 @@ class TelegramNotifier:
         return self.send("\n".join(lines), kind="portfolio_digest")
 
     def hold_digest(self, rows: list[dict], *, equity: float | None = None,
-                    open_positions: int = 0, regime: str | None = None) -> bool:
-        """Watching digest summarizing symbols evaluated without new entries."""
+                    open_positions: int = 0, regime: str | None = None,
+                    strategy_map: dict | None = None) -> bool:
+        """Watch digest providing separate notifications for all cryptos:
+        ⚪ white circle for flat (standing by)
+        🟡 yellow circle for hold (in position)
+        🟢 green circle for buy (entry signal)
+        🔴 red circle for sold (exit/stop)
+        """
         if not rows:
             return False
-        header = "\U0001F440 <b>MARKET SCAN & CYCLE STATUS</b>"
-        lines = [header]
-        meta_parts = []
-        if regime:
-            meta_parts.append(f"Regime: <b>{regime.upper()}</b>")
-        if equity is not None:
-            meta_parts.append(f"Equity: {_money(equity)}")
-        meta_parts.append(f"Positions: {open_positions}/2")
-        lines.append(" | ".join(meta_parts))
-        lines.append("")
-        lines.append("<b>Symbol Evaluations:</b>")
+
+        any_sent = False
+        strat_map = strategy_map or {}
+        reg = (regime or "bull").upper()
+
         for r in rows:
             sym = r["symbol"]
-            act = r.get("action", "hold").replace("_", " ").upper()
-            reason = r.get("reason", "holding")[:90]
+            act = str(r.get("action", "hold")).lower()
+            reason = str(r.get("reason", "watching for setup"))[:100]
             px_val = r.get("price")
+            is_pos = bool(r.get("is_position", False))
+            strat = strat_map.get(sym, r.get("strategy", "trend_breakout"))
+
+            if is_pos:
+                icon = "\U0001F7E1"  # 🟡
+                status_label = "HOLD (IN POSITION)"
+            elif "buy" in act or "enter" in act:
+                icon = "\U0001F7E2"  # 🟢
+                status_label = "BUY (ENTRY SETUP)"
+            elif "exit" in act or "sold" in act or "stop" in act:
+                icon = "\U0001F534"  # 🔴
+                status_label = "SOLD (EXIT / STOP LOSS)"
+            else:
+                icon = "\u26AA"      # ⚪
+                status_label = "FLAT (STANDING BY)"
+
             px_str = f" @ {_money(px_val)}" if px_val else ""
-            lines.append(f"• <b>{sym}</b>: {act}{px_str} ({reason})")
-        lines.append("")
-        lines.append("⏳ <i>Standing by for confirmed breakout triggers with positive edge.</i>")
-        return self.send("\n".join(lines), kind="hold_digest")
+            msg = (
+                f"{icon} <b>{status_label}</b> | <b>{sym}</b>{px_str}\n"
+                f"• <b>Status:</b> {reason}\n"
+                f"• <b>Strategy:</b> {strat} | <b>Regime:</b> {reg}"
+            )
+            ok = self.send(msg, kind=f"symbol_status:{sym}", symbol=sym)
+            if ok:
+                any_sent = True
+            time.sleep(0.08)
+
+        return any_sent
 
     def model_update(self, symbol: str, status: str, auc: float | None,
                      improvement: float | None, threshold: float | None) -> bool:
