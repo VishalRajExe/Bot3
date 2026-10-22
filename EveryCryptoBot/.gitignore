@@ -1,0 +1,33 @@
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv/
+
+# Environment variables & secrets (keep private)
+.env
+*.env
+
+# Runtime data & logs
+logs/
+*.log
+alpaca_state.json
+multi_state.json
+dashboard/live_state.json
+trading_memory.db
+*.db
+*.db-wal
+*.db-shm
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

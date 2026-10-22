@@ -17,10 +17,14 @@ data/candles/*.csv
 data/cache/
 data/models/
 *.joblib
+*.db
+*.sqlite*
 
 # Secrets
 .env
-.env.local
+.env.*
+*.env
+**/.env*
 
 # Logs and process files
 logs/*.log
