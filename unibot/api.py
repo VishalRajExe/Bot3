@@ -209,7 +209,7 @@ def create_app(settings: Settings | None = None, *, db_path: str | None = None,
         except KeyError:
             raise HTTPException(404, f"unknown symbol {symbol}")
         market = build_market(store, settings)
-        df = prepare_bars(store, settings, symbol, market)
+        df = prepare_bars(store, settings, symbol, market, timeframe=timeframe)
         if df.empty:
             return {"symbol": symbol, "candles": [], "signals": [], "last_ts": None,
                     "snapshot": {}}

@@ -82,6 +82,11 @@ class LiveEngine:
         self._last_heartbeat = 0
         self._last_train_check = 0
         self._last_reconcile = 0
+        self._latest_hold_rows = [
+            {"symbol": sym, "action": d.get("action", "hold"), "reason": d.get("reason", "watching"),
+             "price": d.get("price")}
+            for sym, d in self.store.latest_decision_per_symbol().items()
+        ]
 
     # ------------------------------------------------------------------ state
     def account(self) -> dict:
@@ -489,7 +494,7 @@ class LiveEngine:
                     continue
                 if signal.action != "enter_long":
                     hold_rows.append({"symbol": sym, "action": "hold",
-                                      "reason": signal.reason, "prob": prob,
+                                      "reason": signal.reason, "prob": prob, "price": price,
                                       "edge": (prob - gate.threshold) if (gate and prob is not None) else None})
                     continue
 
@@ -574,6 +579,8 @@ class LiveEngine:
                 else:
                     decisions_this_cycle.append({"symbol": sym, "action": "entry_failed",
                                                  "reason": "broker did not fill", "price": price})
+            if hold_rows:
+                self._latest_hold_rows = hold_rows
             self.store.save_portfolio("last_decided_bar", {"bar": bar_close,
                                                            "ts": int(time.time())})
 
@@ -617,9 +624,11 @@ class LiveEngine:
 
         if self.s.telegram.notify_holds and (now - self._last_hold_digest
                                              > self.s.telegram.hold_digest_minutes * 60):
-            if hold_rows or decisions_this_cycle:
-                self.notifier.hold_digest(hold_rows or decisions_this_cycle, equity=equity,
-                                          open_positions=len(self.store.positions()))
+            rows_to_send = hold_rows or getattr(self, "_latest_hold_rows", []) or decisions_this_cycle
+            if rows_to_send:
+                self.notifier.hold_digest(rows_to_send, equity=equity,
+                                          open_positions=len(self.store.positions()),
+                                          regime=regime.label)
                 self._last_hold_digest = now
         if now - self._last_heartbeat > 6 * 3600:
             self.notifier.heartbeat(equity=equity, open_positions=len(self.store.positions()),

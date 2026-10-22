@@ -212,7 +212,7 @@
   "telegram": {
     "enabled": true,
     "notify_holds": true,
-    "hold_digest_minutes": 240,
+    "hold_digest_minutes": 60,
     "rate_limit_per_minute": 18
   },
   "paper": {

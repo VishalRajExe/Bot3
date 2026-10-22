@@ -296,15 +296,30 @@ class TelegramNotifier:
         return self.send("\n".join(lines), kind="portfolio_digest")
 
     def hold_digest(self, rows: list[dict], *, equity: float | None = None,
-                    open_positions: int = 0) -> bool:
+                    open_positions: int = 0, regime: str | None = None) -> bool:
         """Watching digest summarizing symbols evaluated without new entries."""
         if not rows:
             return False
-        lines = ["\U0001F440 WATCHING (no trade this cycle)"]
-        for r in rows:
-            lines.append(f"{r['symbol']}: {r['action'].replace('_', ' ')} - {r['reason'][:120]}")
+        header = "\U0001F440 <b>MARKET SCAN & CYCLE STATUS</b>"
+        lines = [header]
+        meta_parts = []
+        if regime:
+            meta_parts.append(f"Regime: <b>{regime.upper()}</b>")
         if equity is not None:
-            lines.append(f"Equity: {_money(equity)} | Open positions: {open_positions}")
+            meta_parts.append(f"Equity: {_money(equity)}")
+        meta_parts.append(f"Positions: {open_positions}/2")
+        lines.append(" | ".join(meta_parts))
+        lines.append("")
+        lines.append("<b>Symbol Evaluations:</b>")
+        for r in rows:
+            sym = r["symbol"]
+            act = r.get("action", "hold").replace("_", " ").upper()
+            reason = r.get("reason", "holding")[:90]
+            px_val = r.get("price")
+            px_str = f" @ {_money(px_val)}" if px_val else ""
+            lines.append(f"• <b>{sym}</b>: {act}{px_str} ({reason})")
+        lines.append("")
+        lines.append("⏳ <i>Standing by for confirmed breakout triggers with positive edge.</i>")
         return self.send("\n".join(lines), kind="hold_digest")
 
     def model_update(self, symbol: str, status: str, auc: float | None,

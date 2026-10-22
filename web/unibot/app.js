@@ -475,7 +475,7 @@ async function refreshPriceChart() {
   const meta = $("chart-meta");
   if (meta) meta.textContent = `loading ${sym}…`;
   try {
-    const tf = state.selectedTf === "4H" ? "4h" : "1d";
+    const tf = state.selectedTf === "1H" ? "1h" : (state.selectedTf === "4H" ? "4h" : "1d");
     const d = await apiFetch(`/api/candles/${encodeURIComponent(sym)}?timeframe=${tf}&limit=300`);
     const bars = d.candles || [];
     if (!bars.length) {

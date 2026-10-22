@@ -99,20 +99,29 @@ def build_market(store, settings: Settings) -> pd.DataFrame:
     return build_market_series(daily)
 
 
-def prepare_bars(store, settings: Settings, symbol: str, market: pd.DataFrame | None = None
-                 ) -> pd.DataFrame:
+def prepare_bars(store, settings: Settings, symbol: str, market: pd.DataFrame | None = None,
+                 timeframe: str | None = None) -> pd.DataFrame:
     """Decision-timeframe bars with features and causal market context."""
-    base = load_bars(store, symbol, settings.base_timeframe)
-    if base.empty:
-        return base
-    if settings.base_timeframe != settings.timeframe:
-        bars = resample_ohlcv(base, settings.base_timeframe, settings.timeframe)
+    target_tf = timeframe or settings.timeframe
+    if target_tf == "1d":
+        bars = load_bars(store, symbol, "1d")
+        if bars.empty:
+            base = load_bars(store, symbol, settings.base_timeframe)
+            bars = resample_ohlcv(base, settings.base_timeframe, "1d") if not base.empty else base
     else:
-        bars = base
+        base = load_bars(store, symbol, settings.base_timeframe)
+        if base.empty:
+            return base
+        if settings.base_timeframe != target_tf:
+            bars = resample_ohlcv(base, settings.base_timeframe, target_tf)
+        else:
+            bars = base
+    if bars.empty:
+        return bars
     features = add_features(bars)
     if market is None:
         market = build_market(store, settings)
-    return attach_market_context(features, market, settings.timeframe)
+    return attach_market_context(features, market, target_tf)
 
 
 def prepare_all(store, settings: Settings) -> dict[str, pd.DataFrame]:
