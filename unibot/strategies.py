@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
+import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -94,6 +95,23 @@ class MeanRevParams(_Params):
     def _entry_band(cls, v: float) -> float:
         if not 0 < v < 50:
             raise ValueError("rsi_entry must be between 0 and 50")
+        return v
+
+
+class SmcParams(_Params):
+    bias_ema: Literal[20, 50, 100, 200] = 50
+    fvg_lookback_bars: int = 40
+    min_fvg_atr_ratio: float = 0.2
+    rr_ratio: float = 2.0
+    stop_buffer_atr: float = 0.2
+    min_atr_pct: float = 0.5
+    max_atr_pct: float = 25.0
+
+    @field_validator("rr_ratio")
+    @classmethod
+    def _positive_rr(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("rr_ratio must be positive")
         return v
 
 
@@ -307,10 +325,122 @@ class MeanReversion(Strategy):
         return Signal.hold("waiting for mean reversion", **ind)
 
 
+class SmcFvg(Strategy):
+    """Institutional Order Flow: 1H Bias + 1H FVG/OB Zone + Confirmation Retest."""
+
+    name = "smc_fvg"
+    version = "1.0.0"
+    PARAMS = SmcParams
+
+    @property
+    def warmup_bars(self) -> int:
+        return int(self.params.bias_ema) + self.params.fvg_lookback_bars + 10
+
+    def _signal(self, df: pd.DataFrame, i: int, position: PositionView | None) -> Signal:
+        p = self.params
+        row = df.iloc[i]
+        close = float(row["close"])
+        high = float(row["high"])
+        low = float(row["low"])
+        atr_abs = float(row.get("atr14", close * 0.02))
+        atr_pct = float(row.get("atr_pct", 2.0))
+        bias_val = float(row[f"ema{p.bias_ema}"])
+
+        ind = {"close": close, "bias_ema": round(bias_val, 4), "atr_pct": round(atr_pct, 3)}
+
+        if not (p.min_atr_pct <= atr_pct <= p.max_atr_pct):
+            return Signal.hold(f"volatility {atr_pct:.2f}% outside range", **ind)
+
+        # --- Exit Rules
+        if position is not None:
+            entry = position.entry_price
+            stop = position.stop_price or (entry - 2.0 * atr_abs)
+            risk = max(1e-6, entry - stop)
+            tp = entry + p.rr_ratio * risk
+            ind["take_profit"] = round(tp, 4)
+            ind["stop_price"] = round(stop, 4)
+
+            # Fixed 1:2 Take Profit
+            if high >= tp:
+                return Signal("exit_long", f"Take profit 1:{p.rr_ratio:.0f} reached at {tp:.4g}",
+                              indicators=ind)
+            # Stop loss at opposite boundary of 1H zone
+            if low <= stop:
+                return Signal("exit_long", f"Stop loss hit at zone boundary {stop:.4g}",
+                              indicators=ind)
+            # Trend breakdown
+            if close < bias_val * 0.95:
+                return Signal("exit_long", f"Close broke below 1H bias EMA{p.bias_ema}", indicators=ind)
+            return Signal.hold(f"holding SMC (target: {tp:.4g}, stop: {stop:.4g})", **ind)
+
+        # --- Entry Rules
+        btc_trend = float(row.get("btc_trend", 0.0))
+        rsi = float(row.get("rsi14", 50.0))
+        if btc_trend < 0 or rsi < 42:
+            return Signal.hold(f"SMC setup suppressed: btc_trend={btc_trend:.2f}, rsi={rsi:.1f}", **ind)
+
+        # 1. 1H Bullish Bias
+        if close <= bias_val:
+            return Signal.hold(f"bearish bias: close {close:.4g} <= EMA{p.bias_ema} {bias_val:.4g}", **ind)
+
+        # 2. Look for valid unmitigated 1H FVG + OB zone
+        start_idx = max(2, i - p.fvg_lookback_bars)
+        recent_zone = None
+
+        for k in range(i - 1, start_idx, -1):
+            bar_k = df.iloc[k]
+            bar_k2 = df.iloc[k - 2]
+            if float(bar_k["low"]) > float(bar_k2["high"]):
+                gap = float(bar_k["low"]) - float(bar_k2["high"])
+                if gap >= p.min_fvg_atr_ratio * atr_abs:
+                    ob_low = min(float(bar_k2["low"]), float(df.iloc[k - 1]["low"]))
+                    fvg_top = float(bar_k["low"])
+                    zone_bottom = ob_low - p.stop_buffer_atr * atr_abs
+                    sub_lows = df.iloc[k:i]["low"].values
+                    if len(sub_lows) == 0 or np.min(sub_lows) >= zone_bottom:
+                        recent_zone = {"top": fvg_top, "bottom": zone_bottom, "k": k}
+                        break
+
+        if not recent_zone:
+            return Signal.hold("no valid unmitigated 1H FVG + OB zone in lookback", **ind)
+
+        # 3. Check if 1H zone was tapped
+        zone_tapped = low <= recent_zone["top"] and high >= recent_zone["bottom"]
+        if not zone_tapped:
+            return Signal.hold(f"1H FVG+OB zone active ({recent_zone['bottom']:.4g}-{recent_zone['top']:.4g}) but not tapped", **ind)
+
+        # 4. Confirmation: Reaction / displacement off the zone
+        prev = df.iloc[i - 1]
+        reaction = close > float(prev["high"]) or close > float(row["open"])
+        if not reaction:
+            return Signal.hold("zone tapped, waiting for confirmation displacement", **ind)
+
+        # 5. Trigger Buy with stop at opposite boundary of 1H zone
+        stop_price = max(recent_zone["bottom"], close - 5.0 * atr_abs)
+        if stop_price >= close * 0.998:
+            stop_price = close - 1.5 * atr_abs
+
+        tp_target = close + p.rr_ratio * (close - stop_price)
+        ind["zone_bottom"] = round(recent_zone["bottom"], 4)
+        ind["zone_top"] = round(recent_zone["top"], 4)
+        ind["stop_loss"] = round(stop_price, 4)
+        ind["take_profit"] = round(tp_target, 4)
+
+        return Signal(
+            "enter_long",
+            f"1H Bullish Bias + 1H FVG/OB Zone ({recent_zone['bottom']:.4g}-{recent_zone['top']:.4g}) tapped & confirmed (1:{p.rr_ratio:.0f} R:R)",
+            stop_price=stop_price,
+            trail_atr=0.0,
+            indicators=ind,
+            tag="smc_fvg",
+        )
+
+
 REGISTRY: dict[str, type[Strategy]] = {
     "trend_breakout": TrendBreakout,
     "trend_pullback": TrendPullback,
     "mean_reversion": MeanReversion,
+    "smc_fvg": SmcFvg,
 }
 
 

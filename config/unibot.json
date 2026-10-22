@@ -36,14 +36,16 @@
     {
       "symbol": "SOL/USD",
       "cluster": "l1",
-      "strategy": "trend_breakout",
+      "strategy": "smc_fvg",
       "trade_enabled": true,
       "params": {
-        "donchian": 35,
-        "trend_ema": 100,
-        "stop_atr": 2.8,
-        "trail_atr": 3.4,
-        "min_atr_pct": 1.0
+        "bias_ema": 50,
+        "fvg_lookback_bars": 40,
+        "min_fvg_atr_ratio": 0.2,
+        "rr_ratio": 2.0,
+        "stop_buffer_atr": 0.2,
+        "min_atr_pct": 0.5,
+        "max_atr_pct": 25.0
       }
     },
     {

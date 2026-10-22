@@ -1,6 +1,6 @@
-# Portfolio backtest — ratchet test
+# Portfolio backtest — SMC FVG Pilot (SOL/USD)
 
-- run id: `uni_20261022_135221_1d8290`
+- run id: `uni_20261022_173204_00eaba`
 - period: 2021-01-01 → 2026-10-22 (5.80 years)
 - timeframe: 4h · capital $100.00
 
@@ -8,9 +8,9 @@
 
 | Metric | Strategy | Equal-weight hold | BTC hold |
 |---|---:|---:|---:|
-| Net return | -4.43% | +363.72% | +176.89% |
+| Net return | -4.43% | +363.53% | +176.60% |
 | Max drawdown | 12.76% | 90.09% | 77.07% |
-| Final equity | $95.57 | $463.72 | $276.89 |
+| Final equity | $95.57 | $463.53 | $276.60 |
 
 ## Trading statistics
 
@@ -22,7 +22,7 @@
 | Expectancy / trade | $-0.06 |
 | Average R | -0.00 |
 | Average hold | 111.79 h |
-| Exposure | 10.96% |
+| Exposure | 10.95% |
 | Sharpe / Sortino | -0.14 / -0.07 |
 | Fees paid | $5.20 |
 | Slippage cost | $1.46 |
@@ -60,4 +60,4 @@
 
 > Sample size is adequate for a first read; still not a live guarantee.
 
-Generated 2026-10-22T13:53:13.230761+00:00
+Generated 2026-10-22T17:32:29.240712+00:00

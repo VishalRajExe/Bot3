@@ -5,6 +5,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 TIMEFRAME_SECONDS: dict[str, int] = {
+    "1m": 60,
+    "5m": 300,
+    "15m": 900,
     "1h": 3_600,
     "2h": 7_200,
     "4h": 14_400,

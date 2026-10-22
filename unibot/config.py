@@ -139,7 +139,7 @@ class SymbolCfg(BaseModel):
 
     symbol: str
     cluster: str
-    strategy: Literal["trend_breakout", "trend_pullback", "mean_reversion"]
+    strategy: Literal["trend_breakout", "trend_pullback", "mean_reversion", "smc_fvg"]
     trade_enabled: bool = True
     role: str = "tradable"
     execution_symbol: str | None = None
