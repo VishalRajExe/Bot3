@@ -1063,16 +1063,19 @@ function renderModelsTable(models) {
   const container = $("models-table");
   if (!container) return;
   if (!models.length) { container.innerHTML=`<div class="note">No models trained yet. The bot trains after ${25} closed trades.</div>`; return; }
-  const rows = models.map(m => `<tr>
-    <td class="td-sym">${SYM_SHORT[m.symbol]||m.symbol}</td>
-    <td>${m.strategy||"—"}</td>
-    <td class="td-mono">${m.version||"—"}</td>
-    <td class="td-mono ${m.status==="active"?"td-pos":"td-neg"}">${m.status||"—"}</td>
-    <td class="td-mono">${m.auc != null ? fmt(m.auc,3) : "—"}</td>
-    <td class="td-mono">${m.threshold != null ? fmt(m.threshold,2) : "—"}</td>
-    <td class="td-mono">${m.test_samples||"—"}</td>
-    <td class="muted small">${fmtDate(m.trained_at)}</td>
-  </tr>`).join("");
+  const rows = models.map(m => {
+    const verShort = m.version ? m.version.replace(/^[A-Z0-9]+_[a-z_]+_4h_/, "v.") : "—";
+    return `<tr>
+      <td class="td-sym">${SYM_SHORT[m.symbol]||m.symbol}</td>
+      <td>${m.strategy||"—"}</td>
+      <td class="td-mono" title="${m.version||""}" style="font-size:.7rem;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${verShort}</td>
+      <td class="td-mono ${m.status==="active"?"td-pos":"td-neg"}">${m.status||"—"}</td>
+      <td class="td-mono">${m.auc != null ? fmt(m.auc,3) : "—"}</td>
+      <td class="td-mono">${m.threshold != null ? fmt(m.threshold,2) : "—"}</td>
+      <td class="td-mono">${m.n_test ?? m.test_samples ?? "—"}</td>
+      <td class="muted small">${fmtDate(m.trained_at)}</td>
+    </tr>`;
+  }).join("");
   container.innerHTML = `<table>
     <thead><tr><th>Symbol</th><th>Strategy</th><th>Version</th><th>Status</th><th>OOS AUC</th><th>Gate</th><th>Test N</th><th>Trained</th></tr></thead>
     <tbody>${rows}</tbody>
@@ -1082,13 +1085,24 @@ function renderModelsTable(models) {
 function renderLearningRules(ls) {
   const container = $("learning-rules");
   if (!container) return;
-  const risk_mult = ls.risk_multipliers || {};
-  const cooldowns = ls.cooldowns || {};
+  const activeGates = (ls.models || []).filter(m => m.active);
+  const activeGatesNames = activeGates.map(m => SYM_SHORT[m.symbol] || m.symbol).join(", ");
+  const n_gates = ls.n_gates ?? activeGates.length;
+  const gatesDesc = n_gates > 0 ? `${n_gates} symbol${n_gates > 1 ? "s" : ""} active (${activeGatesNames})` : "0 symbols using AI gate";
+
+  const n_lessons = ls.n_lessons ?? (ls.lessons || []).length;
+  const nonDefaultRisk = (ls.symbols || []).filter(s => s.risk_multiplier && Math.abs(s.risk_multiplier - 1.0) > 0.01);
+  const riskDesc = nonDefaultRisk.length ? nonDefaultRisk.map(s => `${SYM_SHORT[s.symbol]||s.symbol}: ${(s.risk_multiplier*100).toFixed(0)}%`).join(" · ") : "all at 100%";
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const activeCooldowns = (ls.symbols || []).filter(s => s.cooldown_until && s.cooldown_until > nowSec);
+  const cdDesc = activeCooldowns.length ? activeCooldowns.map(s => SYM_SHORT[s.symbol]||s.symbol).join(", ") : "none";
+
   const items = [
-    { title:"Symbol risk multipliers", desc:Object.entries(risk_mult).map(([s,v])=>`${s}: ${(v*100).toFixed(0)}%`).join(" · ")||"all at 100%", icon:"⚖️" },
-    { title:"Active cooldowns", desc:Object.keys(cooldowns).join(", ")||"none", icon:"⏱️" },
-    { title:"Model gates active", desc:`${ls.n_gates||0} symbols using AI gate`, icon:"🧠" },
-    { title:"Lessons stored", desc:`${ls.n_lessons||0} heuristic reviews from closed trades`, icon:"📚" },
+    { title:"Symbol risk multipliers", desc:riskDesc, icon:"⚖️" },
+    { title:"Active cooldowns", desc:cdDesc, icon:"⏱️" },
+    { title:"Model gates active", desc:gatesDesc, icon:"🧠" },
+    { title:"Lessons stored", desc:`${n_lessons} heuristic review${n_lessons === 1 ? "" : "s"} from closed trades`, icon:"📚" },
   ];
   container.innerHTML = items.map(i => `
     <div class="rule-item">

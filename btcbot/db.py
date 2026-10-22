@@ -387,6 +387,13 @@ class Database:
         row = self.query_one(sql, params)
         return None if row is None else row[0]
 
+    def table_exists(self, name: str) -> bool:
+        row = self.query_one(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?",
+            (name,),
+        )
+        return row is not None
+
     def close(self) -> None:
         with self._lock:
             self.conn.close()

@@ -307,10 +307,6 @@ def create_app(settings: Settings | None = None, *, db_path: str | None = None,
         return {"run_id": rid, "points": pts}
 
     # ------------------------------------------------------------------ models
-    @app.get("/api/models")
-    def models() -> dict:
-        return {"models": model_report(store, settings)}
-
     @app.get("/api/learning")
     def learning() -> dict:
         return learning_state(store, settings)
@@ -428,26 +424,43 @@ def create_app(settings: Settings | None = None, *, db_path: str | None = None,
     def models_info() -> dict:
         rpt = model_report(store, settings)
         ls  = learning_state(store, settings)
-        lessons = [
-            {"symbol": r["symbol"], "lesson": r["lesson"], "ts": r["created_at"]}
-            for r in store.db.query(
-                "SELECT symbol, lesson, created_at FROM uni_lessons ORDER BY id DESC LIMIT 40"
-            )
-        ] if store.db.table_exists("uni_lessons") else []
-        cohorts = [
-            dict(r) for r in store.db.query(
-                "SELECT symbol, strategy, n_trades, wins, losses, net_pnl,"
-                " risk_multiplier, CAST(wins*100.0/MAX(n_trades,1) AS REAL) win_rate_pct,"
-                " CAST(gross_profit/MAX(gross_loss,0.0001) AS REAL) profit_factor"
-                " FROM uni_symbol_stats ORDER BY n_trades DESC"
-            )
-        ]
-        exps = [
-            dict(r) for r in store.db.query(
-                "SELECT symbol, kind, status, hypothesis, base_return_pct, variant_return_pct, created_at"
-                " FROM experiments ORDER BY id DESC LIMIT 30"
-            )
-        ] if store.db.table_exists("experiments") else []
+        lessons = []
+        if store.db.table_exists("uni_lessons"):
+            try:
+                lessons = [
+                    {"symbol": r["symbol"], "lesson": r["lesson"], "ts": r["created_at"]}
+                    for r in store.db.query(
+                        "SELECT symbol, lesson, created_at FROM uni_lessons ORDER BY id DESC LIMIT 40"
+                    )
+                ]
+            except Exception:
+                pass
+        strat_map = {cfg.symbol: cfg.strategy for cfg in settings.universe}
+        cohorts = []
+        if store.db.table_exists("uni_symbol_stats"):
+            try:
+                for r in store.db.query(
+                    "SELECT symbol, n_trades, wins, losses, net_pnl,"
+                    " risk_multiplier, CAST(wins*100.0/MAX(n_trades,1) AS REAL) win_rate_pct,"
+                    " CAST(gross_profit/MAX(gross_loss,0.0001) AS REAL) profit_factor"
+                    " FROM uni_symbol_stats ORDER BY n_trades DESC"
+                ):
+                    d = dict(r)
+                    d["strategy"] = strat_map.get(d["symbol"], "trend_breakout")
+                    cohorts.append(d)
+            except Exception:
+                pass
+        exps = []
+        if store.db.table_exists("experiments"):
+            try:
+                exps = [
+                    dict(r) for r in store.db.query(
+                        "SELECT symbol, kind, status, hypothesis, base_return_pct, variant_return_pct, created_at"
+                        " FROM experiments ORDER BY id DESC LIMIT 30"
+                    )
+                ]
+            except Exception:
+                pass
         return {
             "models": rpt, "learning_state": ls,
             "lessons": lessons, "cohorts": cohorts, "experiments": exps,
