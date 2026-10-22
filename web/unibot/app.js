@@ -143,12 +143,12 @@ function buildTfButtons() {
 
 // ====================================================================== POLL
 async function pollAll() {
+  updateHealth();
   await Promise.allSettled([
     pollOverview(),
     pollDecisions(),
     pollCoverage(),
   ]);
-  updateHealth();
 }
 
 async function pollOverview() {
