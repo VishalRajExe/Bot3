@@ -6,8 +6,10 @@ within a single unified Render service.
 
 from __future__ import annotations
 
+import gzip
 import logging
 import os
+import shutil
 import sys
 import threading
 import time
@@ -65,6 +67,18 @@ def main() -> None:
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
     settings = Settings.load(config_path)
+
+    # Decompress pre-seeded research database if sqlite file is absent or empty
+    db_path = settings.paths.db
+    gz_path = db_path + ".gz"
+    if (not os.path.exists(db_path) or os.path.getsize(db_path) < 1024 * 1024) and os.path.exists(gz_path):
+        log.info("Unpacking pre-seeded database %s (%d bytes) -> %s ...",
+                 gz_path, os.path.getsize(gz_path), db_path)
+        with gzip.open(gz_path, "rb") as f_in:
+            with open(db_path, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        log.info("Pre-seeded database extracted successfully (%d bytes).", os.path.getsize(db_path))
+
     store = UnibotStore(settings.paths.db)
 
     # Launch autonomous trading engine in background daemon thread

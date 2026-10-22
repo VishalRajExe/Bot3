@@ -15,10 +15,12 @@ data/*.sqlite3-shm
 data/candles/*.parquet
 data/candles/*.csv
 data/cache/
-data/models/
-*.joblib
 *.db
-*.sqlite*
+
+# Pre-seeded research database and trained model artifacts for deployment
+!data/unibot.sqlite3.gz
+!data/models/
+!data/models/*.joblib
 
 # Secrets
 .env

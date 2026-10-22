@@ -671,7 +671,14 @@ class LiveEngine:
         return {"results": results, "active_gates": sorted(self.gates)}
 
     def run_forever(self) -> None:
-        equity, _ = self.equity()
+        equity, cash = self.equity()
+        pos_rows = self.store.positions()
+        regime = self.store.latest_regime() or {}
+        self.store.save_portfolio("equity_snapshot", {
+            "equity": round(equity, 4), "cash": round(cash, 4),
+            "positions": len(pos_rows),
+            "regime": regime.get("label", "bull"), "ts": int(time.time()),
+        })
         self.notifier.startup(equity=equity, symbols=len(self.s.universe), mode="Alpaca paper")
         self.gates = load_active_gates(self.store, self.s)
         while not self.stop_event.is_set():

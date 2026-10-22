@@ -145,9 +145,10 @@ def test_notifier_formats_messages(monkeypatch):
 
 def test_hold_digest_lists_every_symbol():
     n = TelegramNotifier("t", "c", enabled=True)
-    captured = {}
-    n.send = lambda text, **kw: captured.setdefault("text", text) or True
+    captured = []
+    n.send = lambda text, **kw: (captured.append(text), True)[1]
     n.hold_digest([{"symbol": "BTC/USD", "action": "hold", "reason": "below high"},
                    {"symbol": "SOL/USD", "action": "hold", "reason": "RSI mid"}],
                   equity=100.0, open_positions=0)
-    assert "BTC/USD" in captured["text"] and "SOL/USD" in captured["text"]
+    all_texts = " ".join(captured)
+    assert "BTC/USD" in all_texts and "SOL/USD" in all_texts
