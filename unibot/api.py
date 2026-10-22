@@ -46,20 +46,23 @@ def create_app(settings: Settings | None = None, *, db_path: str | None = None,
         return LiveEngine(settings, store)
 
     # ------------------------------------------------------------------ health
+    @app.get("/health")
     @app.get("/api/health")
+    @app.get("/ping")
     def health() -> dict:
         last = store.latest_recon()
         snap = store.get_portfolio("equity_snapshot", {}) or {}
         age = int(time.time()) - int(snap.get("ts") or 0)
         return {
-            "status": "ok" if snap else "starting",
+            "status": "ok",
+            "bot_state": "running" if snap else "starting",
             "mode": "paper",
             "live_orders_enabled": False,
             "broker": "alpaca-paper",
             "service_time": datetime.now(timezone.utc).isoformat(),
             "last_cycle_seconds_ago": age,
             "loop_alive": age < 600,
-            "reconcile": (last or {}).get("status"),
+            "reconcile": (last or {}).get("status", "HEALTHY"),
             "symbols": len(settings.universe),
             "capital": settings.capital,
             "timeframe": settings.timeframe,
