@@ -1,0 +1,804 @@
+#  Drakkar-Software OctoBot-Node
+#  Copyright (c) Drakkar-Software, All rights reserved.
+#
+#  This library is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU Lesser General Public
+#  License as published by the Free Software Foundation; either
+#  version 3.0 of the License, or (at your option) any later version.
+#
+#  This library is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public
+#  License along with this library.
+import json
+import time
+import typing
+import dataclasses
+import dbos
+
+import octobot_commons.logging
+import octobot_commons.errors
+
+import octobot_trading.errors
+
+import octobot_copy.errors as copy_errors
+
+import octobot_flow.entities
+import octobot_flow.enums
+import octobot_flow.errors
+import octobot_flow.logic.accounts.account_state_persistence as account_state_persistence_module
+import octobot_flow.repositories.community.community_repository as community_repository
+
+import octobot_node.enums
+import octobot_node.models
+import octobot_node.scheduler.automations.octobot_flow_client as octobot_flow_client
+import octobot_node.scheduler.task_context
+import octobot_node.constants as constants
+import octobot_node.scheduler.workflows.params as params
+import octobot_node.scheduler.automations.automation_states_loader as automation_states_loader
+import octobot_node.scheduler.workflows_util as workflows_util
+import octobot_node.scheduler.automations.signal_execution_result_util as signal_execution_result_util
+import octobot_node.errors as errors
+
+import octobot.community.node_journal as node_journal
+
+from octobot_node.scheduler import SCHEDULER  # avoid circular import
+
+@dataclasses.dataclass
+class _IterationExecutionState:
+    execution_error: str | None = None
+    execution_error_message: str | None = None
+    postponed_iteration: bool = False
+    next_step_at: float | None = None
+    next_iteration_description_override: str | None = None
+    next_iteration_description_metadata_override: str | None = None
+
+
+@SCHEDULER.INSTANCE.dbos_class()
+class AutomationWorkflow:
+    # Always use dict as input to parse minimizable dataclasses and facilitate data format updates
+
+    @staticmethod
+    @SCHEDULER.INSTANCE.workflow(name=octobot_node.enums.SchedulerWorkflowNames.EXECUTE_AUTOMATION.value)
+    async def execute_automation(inputs: dict) -> typing.Optional[str]:
+        """
+        Automation workflow runner: 
+        1. Wait for priority actions (zero timeout when execution_time is already due).
+        2. Execute the iteration (received priority action or DAG's executable actions).
+        3. Check and process other received priority actions if any.
+        4. Either:
+            A. Reschedule the next iteration as a child workflow to avoid growing the workflow forever.
+            B. Complete the workflow and stop the automation.
+        5. If completed, return the updated task.content (the automation state) as workflow output.
+           On unexpected error, output state is best-effort: latest iteration description if any,
+           else workflow input task.content from the previous iteration.
+        """
+        output: typing.Optional[params.AutomationWorkflowOutput] = None
+        iteration_result = None
+        actions_update = None
+        parsed_inputs: typing.Optional[params.AutomationWorkflowInputs] = None
+        try:
+            parsed_inputs = params.AutomationWorkflowInputs.from_dict(inputs)
+            delay = parsed_inputs.execution_time - time.time()
+            delay_str = f" in {delay:.2f} seconds" if delay > 0 else ""
+            AutomationWorkflow.get_logger(parsed_inputs).info(f"{AutomationWorkflow.__name__} starting{delay_str}.")
+            actions_update = await AutomationWorkflow._wait_and_trigger_on_actions_update(
+                parsed_inputs, parsed_inputs.execution_time
+            )
+            raw_iteration_result = await AutomationWorkflow.execute_iteration(inputs, actions_update)
+            iteration_result = params.AutomationWorkflowIterationResult.from_dict(raw_iteration_result)
+            continue_workflow = False
+            if (
+                iteration_result.progress_status.postponed_iteration
+                or AutomationWorkflow._should_continue_workflow(
+                    parsed_inputs, iteration_result.progress_status, bool(actions_update)
+                )
+            ):
+                # update iteration_result to include the executions of priority actions if any
+                continue_workflow, iteration_result = await AutomationWorkflow._process_pending_priority_actions_and_reschedule(
+                    parsed_inputs, iteration_result
+                )
+            if not continue_workflow:
+                AutomationWorkflow.get_logger(parsed_inputs).info(
+                    f"Automation stopped (remaining steps: {iteration_result.progress_status.remaining_steps})"
+                )
+                final_state, final_state_metadata = AutomationWorkflow._best_effort_workflow_output_state(
+                    parsed_inputs, iteration_result
+                )
+                final_error = iteration_result.progress_status.error
+                if final_state is not None or final_error is not None:
+                    output = params.AutomationWorkflowOutput(
+                        state=final_state,
+                        state_metadata=final_state_metadata,
+                        error=final_error,
+                        error_message=iteration_result.progress_status.error_message,
+                    )
+        except Exception as err:
+            AutomationWorkflow.get_logger(parsed_inputs).exception(
+                err, True, f"Interrupted workflow: unexpected critical error: {err} ({err.__class__.__name__})"
+            )
+            output = await AutomationWorkflow._finalize_interrupted_workflow_output(
+                parsed_inputs,
+                actions_update,
+                iteration_result,
+                error_status=AutomationWorkflow._get_failed_error_status(err),
+                error_message=str(err),
+            )
+        return json.dumps(output.to_dict(include_default_values=False)) if output else None
+
+    @staticmethod
+    def _best_effort_workflow_output_state(
+        parsed_inputs: typing.Optional[params.AutomationWorkflowInputs],
+        iteration_result: typing.Optional[params.AutomationWorkflowIterationResult],
+    ) -> tuple[typing.Optional[str], typing.Optional[str]]:
+        if (
+            iteration_result is not None
+            and iteration_result.next_iteration_description is not None
+        ):
+            return (
+                iteration_result.next_iteration_description,
+                iteration_result.next_iteration_description_metadata,
+            )
+        if parsed_inputs is not None and parsed_inputs.task.content:
+            return parsed_inputs.task.content, parsed_inputs.task.content_metadata
+        return None, None
+
+    @staticmethod
+    async def _finalize_interrupted_workflow_output(
+        parsed_inputs: typing.Optional[params.AutomationWorkflowInputs],
+        actions_update: typing.Optional[dict],
+        iteration_result: typing.Optional[params.AutomationWorkflowIterationResult],
+        *,
+        error_status: str,
+        error_message: str,
+    ) -> params.AutomationWorkflowOutput:
+        await AutomationWorkflow._send_signal_execution_result_safe(
+            parsed_inputs,
+            actions_update,
+            [],
+            iteration_error=error_status,
+            iteration_error_message=error_message,
+        )
+        state, state_metadata = AutomationWorkflow._best_effort_workflow_output_state(
+            parsed_inputs, iteration_result
+        )
+        return params.AutomationWorkflowOutput(
+            state=state,
+            state_metadata=state_metadata,
+            error=error_status,
+            error_message=error_message,
+        )
+
+    @staticmethod
+    def _should_retry(error: BaseException) -> bool:
+        return not isinstance(error, (
+            # workflow stopping errors
+            errors.WorkflowError,
+            octobot_flow.errors.ConfigurationError,
+            copy_errors.OutdatedReferenceAccountError,
+            octobot_commons.errors.UnsupportedOperatorError,
+        ))
+
+    @staticmethod
+    @SCHEDULER.INSTANCE.step(
+        name="execute_iteration",
+        retries_allowed=True,
+        interval_seconds=constants.AUTOMATION_WORKFLOW_RETRY_INTERVAL_SECONDS,
+        max_attempts=constants.AUTOMATION_WORKFLOW_MAX_ITERATION_RETRIES,
+        backoff_rate=constants.AUTOMATION_WORKFLOW_BACKOFF_RATE,
+        should_retry=_should_retry,
+        preemptible=True, # cancelling workflow will cancel the iteration
+    )
+    async def execute_iteration(inputs: dict, actions_update: typing.Optional[dict]) -> dict:
+        """
+        Execute an automation iteration: executed actions can be received priority actions or DAG's executable actions.
+        In case of priority actions, the returned next scheduled time will be the same as the previous one to respect
+        the latest DAG execution time schedule.
+
+        Should be a SCHEDULER.INSTANCE.step to avoid executing actions twice when recovering a workflow 
+        that was interrupted while executing priority actions which were received AFTER the initial 
+        iteration of the workflow.
+
+        Will retry up to 3 times in case of an unexpected error before failing step.
+        """
+        parsed_inputs: params.AutomationWorkflowInputs = params.AutomationWorkflowInputs.from_dict(inputs)
+        executed_step: str = "no action executed"
+        next_step: str | None = None
+        next_actions: list[octobot_flow.entities.AbstractActionDetails] = []
+        remaining_steps = 0
+        result = octobot_flow_client.OctoBotActionsJobResult()
+        with octobot_node.scheduler.task_context.encrypted_task(parsed_inputs.task, result):
+            #### Start of decryped task context ####
+            iteration_state = _IterationExecutionState()
+            if parsed_inputs.task.type == octobot_node.models.TaskType.EXECUTE_ACTIONS.value:
+                user_actions, trading_signals = AutomationWorkflow._parse_actions_update_envelope(actions_update)
+                AutomationWorkflow._log_iteration_execution_intent(
+                    parsed_inputs, user_actions, trading_signals
+                )
+                await AutomationWorkflow._run_action_job_with_error_handling(
+                    parsed_inputs,
+                    user_actions,
+                    trading_signals,
+                    result,
+                    iteration_state,
+                )
+                executed_step = AutomationWorkflow._apply_processed_action_errors(
+                    parsed_inputs,
+                    result,
+                    iteration_state,
+                    executed_step,
+                )
+            else:
+                raise errors.WorkflowInputError(f"Invalid task type: {parsed_inputs.task.type}")
+            if not iteration_state.postponed_iteration:
+                next_step, next_actions, remaining_steps = AutomationWorkflow._finalize_successful_iteration(
+                    parsed_inputs,
+                    result,
+                    iteration_state,
+                    executed_step,
+                    next_actions,
+                )
+            else:
+                AutomationWorkflow._finalize_postponed_iteration(parsed_inputs, iteration_state)
+            await AutomationWorkflow._send_signal_execution_result_safe(
+                parsed_inputs,
+                actions_update,
+                result.processed_actions,
+                iteration_error=iteration_state.execution_error if iteration_state.postponed_iteration else None,
+                iteration_error_message=(
+                    iteration_state.execution_error_message if iteration_state.postponed_iteration else None
+                ),
+            )
+            #### End of decryped task context - no clear data after this point in encrypted context ####
+
+        return AutomationWorkflow._build_iteration_result(
+            executed_step=executed_step,
+            next_step=next_step,
+            remaining_steps=remaining_steps,
+            iteration_state=iteration_state,
+            result=result,
+        )
+
+    @staticmethod
+    def _apply_preserve_state_postpone(
+        action_job: octobot_flow_client.OctoBotActionsJob,
+        parsed_inputs: params.AutomationWorkflowInputs,
+        iteration_state: _IterationExecutionState,
+        *,
+        execution_error: str | None,
+        execution_error_message: str | None,
+    ) -> None:
+        iteration_state.next_step_at = octobot_flow_client.OctoBotActionsJobDescription.get_next_execution_time(
+            action_job.description.state
+        )
+        iteration_state.postponed_iteration = True
+        iteration_state.execution_error = execution_error
+        iteration_state.execution_error_message = execution_error_message
+        iteration_state.next_iteration_description_override = parsed_inputs.task.content
+        iteration_state.next_iteration_description_metadata_override = parsed_inputs.task.content_metadata
+
+    @staticmethod
+    def _log_action_job_error_and_raise(
+        parsed_inputs: params.AutomationWorkflowInputs,
+        err: BaseException,
+    ) -> typing.NoReturn:
+        # use retry policy & log propagated errors to also associate
+        # them to the automation's error tracking
+        AutomationWorkflow.get_logger(parsed_inputs).exception(
+            err, True, f"Error while running automation job: {err}"
+        )
+        raise err
+
+    @staticmethod
+    async def _run_action_job_with_error_handling(
+        parsed_inputs: params.AutomationWorkflowInputs,
+        user_actions: list[dict],
+        trading_signals: list[dict],
+        result: octobot_flow_client.OctoBotActionsJobResult,
+        iteration_state: _IterationExecutionState,
+    ) -> None:
+        action_job = None
+        try:
+            action_job = octobot_flow_client.OctoBotActionsJob(
+                parsed_inputs.task.content,
+                user_actions,
+                trading_signals,
+                result,
+                # CommunityRepository (used inside the job) needs the EVM wallet
+                # address, not the Starfish user_id — derive it from the task
+                # identity so the community sync client resolves correctly.
+                wallet_address=community_repository.CommunityRepository.user_id_to_evm(
+                    parsed_inputs.task.user_id
+                ),
+            )
+            await action_job.run()
+        except octobot_trading.errors.RetriableFailedRequest as err:
+            # instantly retriable errors, retry immediately
+            AutomationWorkflow.get_logger(parsed_inputs).exception(
+                err, True, f"Retriable error while running automation job: {err}"
+            )
+            raise
+        except (
+            octobot_flow.errors.PendingPriorityActionsSkippedError,
+            copy_errors.OutdatedReferenceAccountError,
+        ) as err:
+            # don't retry, just skip the iteration
+            workflow_logger = AutomationWorkflow.get_logger(parsed_inputs)
+            postpone_execution_error = None
+            postpone_execution_error_message = None
+            if isinstance(err, copy_errors.OutdatedReferenceAccountError):
+                workflow_logger.info(
+                    f"Outdated reference account, skipping copy iteration: {err}"
+                )
+            else:
+                workflow_logger.error(
+                    f"Pending priority actions were skipped: {err}"
+                )
+                postpone_execution_error = "pending_priority_actions_skipped"
+                postpone_execution_error_message = str(err)
+            if action_job is None:
+                # should never happen, but just in case
+                raise
+            AutomationWorkflow._apply_preserve_state_postpone(
+                action_job,
+                parsed_inputs,
+                iteration_state,
+                execution_error=postpone_execution_error,
+                execution_error_message=postpone_execution_error_message,
+            )
+        except (
+            octobot_trading.errors.AuthenticationError,
+            octobot_trading.errors.PortfolioNegativeValueError,
+            octobot_trading.errors.FailedRequest,
+            octobot_trading.errors.MissingFunds,
+            octobot_trading.errors.MissingMinimalExchangeTradeVolume,
+        ) as err:
+            # postponing errors, retry after a delay
+            AutomationWorkflow.get_logger(parsed_inputs).error(
+                f"{err.__class__.__name__} error (postponed iteration): {err}"
+            )
+            execution_error_status, postpone_delay_seconds = (
+                AutomationWorkflow._get_postponed_iteration_error_status_and_delay(err)
+            )
+            iteration_state.next_step_at = time.time() + postpone_delay_seconds
+            iteration_state.execution_error = execution_error_status.value
+            iteration_state.execution_error_message = str(err)
+            iteration_state.postponed_iteration = True
+            iteration_state.next_iteration_description_override = (
+                automation_states_loader.patch_task_content_degraded_state(
+                    parsed_inputs.task.content,
+                    iteration_state.execution_error,
+                    iteration_state.execution_error_message,
+                    since=time.time(),
+                )
+            )
+            iteration_state.next_iteration_description_metadata_override = parsed_inputs.task.content_metadata
+        except octobot_flow.errors.CommunityTradingSignalError as err:
+            # Stop cases: don't forward error, just stop the workflow
+            iteration_state.execution_error = octobot_flow.enums.ActionErrorStatus.NO_TRADING_SIGNAL.value
+            iteration_state.execution_error_message = str(err)
+        except octobot_commons.errors.UnsupportedOperatorError as err:
+            # Priority user actions: postpone like skipped-priority handler.
+            # DAG errors: log and re-raise via _log_action_job_error_and_raise (same as generic Exception).
+            if user_actions:
+                AutomationWorkflow.get_logger(parsed_inputs).error(
+                    f"Unsupported DSL operator in priority user action(s): {err}"
+                )
+                if action_job is None:
+                    # should never happen, but just in case
+                    raise
+                AutomationWorkflow._apply_preserve_state_postpone(
+                    action_job,
+                    parsed_inputs,
+                    iteration_state,
+                    execution_error=octobot_flow.enums.ActionErrorStatus.INTERNAL_ERROR.value,
+                    execution_error_message=str(err),
+                )
+            else:
+                AutomationWorkflow._log_action_job_error_and_raise(parsed_inputs, err)
+        except Exception as err:
+            AutomationWorkflow._log_action_job_error_and_raise(parsed_inputs, err)
+
+    @staticmethod
+    def _apply_processed_action_errors(
+        parsed_inputs: params.AutomationWorkflowInputs,
+        result: octobot_flow_client.OctoBotActionsJobResult,
+        iteration_state: _IterationExecutionState,
+        executed_step: str,
+    ) -> str:
+        if not result.processed_actions:
+            return executed_step
+        if latest_step := AutomationWorkflow._get_actions_summary(result.processed_actions, minimal=True):
+            executed_step = latest_step
+        for action in result.processed_actions:
+            if action.error_status is not None:
+                AutomationWorkflow.get_logger(parsed_inputs).error(
+                    f"Error: {action.error_status} when executing action {action.id}: {action.get_summary()} "
+                )
+                iteration_state.execution_error = action.error_status
+                iteration_state.execution_error_message = action.error_message
+        return executed_step
+
+    @staticmethod
+    def _finalize_successful_iteration(
+        parsed_inputs: params.AutomationWorkflowInputs,
+        result: octobot_flow_client.OctoBotActionsJobResult,
+        iteration_state: _IterationExecutionState,
+        executed_step: str,
+        next_actions: list[octobot_flow.entities.AbstractActionDetails],
+    ) -> tuple[str | None, list[octobot_flow.entities.AbstractActionDetails], int]:
+        remaining_steps = 0
+        if result.has_next_actions:
+            if result.actions_dag:
+                next_actions = result.actions_dag.get_executable_actions()
+                remaining_steps = len(result.actions_dag.get_pending_actions())
+            iteration_state.next_step_at = octobot_flow_client.OctoBotActionsJobDescription.get_next_execution_time(
+                result.next_actions_description.state
+            ) if result.next_actions_description else None
+        next_step = AutomationWorkflow._get_actions_summary(next_actions, minimal=True)
+        next_actions_str = f"next immediate actions: {next_actions}" if next_actions else "all actions completed"
+        AutomationWorkflow.get_logger(parsed_inputs).info(
+            f"Iteration completed, executed step: '{executed_step}', {next_actions_str}"
+        )
+        account_state_persistence_module.persist_account_trading_from_iteration_state(
+            parsed_inputs.task.user_id,
+            result.next_actions_description.state if result.next_actions_description else None,
+        )
+        if result.next_actions_description is not None:
+            account_state_persistence_module.trim_live_trades_in_iteration_state(
+                result.next_actions_description.state,
+                constants.AUTOMATION_LIVE_STATE_MAX_TRADES,
+            )
+        return next_step, next_actions, remaining_steps
+
+    @staticmethod
+    def _finalize_postponed_iteration(
+        parsed_inputs: params.AutomationWorkflowInputs,
+        iteration_state: _IterationExecutionState,
+    ) -> None:
+        retry_delay_seconds = max(0.0, (iteration_state.next_step_at or time.time()) - time.time())
+        AutomationWorkflow.get_logger(parsed_inputs).info(
+            f"Iteration postponed ({iteration_state.execution_error}: {iteration_state.execution_error_message}), "
+            f"retry scheduled in {retry_delay_seconds:.0f} seconds"
+        )
+        if iteration_state.execution_error is not None:
+            AutomationWorkflow._record_automation_run_errored(
+                parsed_inputs,
+                error_status=iteration_state.execution_error,
+                error_origin="postponed_iteration",
+                error=Exception(
+                    iteration_state.execution_error_message
+                    or iteration_state.execution_error
+                ),
+                retriable=True,
+            )
+
+    @staticmethod
+    async def _send_signal_execution_result_safe(
+        parsed_inputs: params.AutomationWorkflowInputs | None,
+        actions_update: typing.Optional[dict],
+        processed_actions: list["octobot_flow.entities.AbstractActionDetails"],
+        *,
+        iteration_error: str | None = None,
+        iteration_error_message: str | None = None,
+    ) -> None:
+        try:
+            await AutomationWorkflow._maybe_send_signal_execution_result(
+                actions_update,
+                processed_actions,
+                iteration_error=iteration_error,
+                iteration_error_message=iteration_error_message,
+            )
+        except Exception:
+            AutomationWorkflow.get_logger(parsed_inputs).exception(
+                "Failed to send signal execution result callback",
+                exc_info=True,
+            )
+
+    @staticmethod
+    def _build_iteration_result(
+        *,
+        executed_step: str,
+        next_step: str | None,
+        remaining_steps: int,
+        iteration_state: _IterationExecutionState,
+        result: octobot_flow_client.OctoBotActionsJobResult,
+    ) -> dict:
+        return params.AutomationWorkflowIterationResult(
+            progress_status=params.ProgressStatus(
+                latest_step=executed_step,
+                next_step=next_step,
+                next_step_at=iteration_state.next_step_at,
+                remaining_steps=remaining_steps,
+                error=iteration_state.execution_error,
+                error_message=iteration_state.execution_error_message,
+                should_stop=result.should_stop,
+                postponed_iteration=iteration_state.postponed_iteration,
+            ),
+            next_iteration_description=(
+                iteration_state.next_iteration_description_override
+                if iteration_state.postponed_iteration
+                else result.maybe_encrypted_next_actions_description
+            ),
+            next_iteration_description_metadata=(
+                iteration_state.next_iteration_description_metadata_override
+                if iteration_state.postponed_iteration
+                else result.next_actions_description_encryption_metadata
+            ),
+            has_next_actions=(
+                True if iteration_state.postponed_iteration else result.has_next_actions
+            ),
+        ).to_dict(include_default_values=False)
+
+    @staticmethod
+    async def _maybe_send_signal_execution_result(
+        actions_update: typing.Optional[dict],
+        processed_actions: list["octobot_flow.entities.AbstractActionDetails"],
+        iteration_error: typing.Optional[str] = None,
+        iteration_error_message: typing.Optional[str] = None,
+    ) -> None:
+        if not actions_update:
+            return
+        envelope = params.AutomationWorkflowActionUpdate.from_dict(actions_update)
+        if envelope.execution_result_callback is None:
+            return
+        if envelope.actions_type != octobot_node.enums.AutomationWorkflowActionTypes.USER_ACTIONS.value:
+            return
+        execution_result_payload = signal_execution_result_util.build_signal_execution_result_payload(
+            envelope,
+            processed_actions,
+            iteration_error=iteration_error,
+            iteration_error_message=iteration_error_message,
+        )
+        if execution_result_payload is None:
+            return
+        await SCHEDULER.INSTANCE.send_async(
+            envelope.execution_result_callback.reply_workflow_id,
+            execution_result_payload.to_dict(include_default_values=False),
+            topic=octobot_node.enums.AutomationWorkflowMessageTopics.SIGNAL_EXECUTION_RESULT.value,
+        )
+
+    @staticmethod
+    async def _wait_and_trigger_on_actions_update(
+        parsed_inputs: params.AutomationWorkflowInputs, resume_execution_time: float
+    ) -> typing.Optional[dict]:
+        delay = max(0, resume_execution_time - time.time())
+        actions_topic = octobot_node.enums.AutomationWorkflowMessageTopics.ACTIONS_UPDATE.value
+        if recv_payload := await SCHEDULER.INSTANCE.recv_async(topic=actions_topic, timeout_seconds=delay):
+            AutomationWorkflow.get_logger(parsed_inputs).info(f"Received actions updates: {recv_payload}")
+            return recv_payload
+        return None
+
+    @staticmethod
+    def _parse_actions_update_envelope(
+        actions_update: typing.Optional[dict],
+    ) -> tuple[list[dict], list[dict]]:
+        if not actions_update:
+            return [], []
+        envelope = params.AutomationWorkflowActionUpdate.from_dict(actions_update)
+        if envelope.actions_type == octobot_node.enums.AutomationWorkflowActionTypes.USER_ACTIONS.value:
+            return list(envelope.actions_details), []
+        if envelope.actions_type == octobot_node.enums.AutomationWorkflowActionTypes.TRADING_SIGNAL.value:
+            return [], list(envelope.actions_details)
+        if envelope.actions_type == octobot_node.enums.AutomationWorkflowActionTypes.FORCED_TRIGGER.value:
+            return [], []
+        return [], []
+
+    @staticmethod
+    def _is_forced_trigger_update(actions_update: dict) -> bool:
+        envelope = params.AutomationWorkflowActionUpdate.from_dict(actions_update)
+        return envelope.actions_type == octobot_node.enums.AutomationWorkflowActionTypes.FORCED_TRIGGER.value
+
+    @staticmethod
+    def _log_iteration_execution_intent(
+        parsed_inputs: params.AutomationWorkflowInputs,
+        user_actions: list[dict],
+        trading_signals: list[dict],
+    ) -> None:
+        logger = AutomationWorkflow.get_logger(parsed_inputs)
+        if user_actions:
+            logger.info(f"Executing user actions: {user_actions}")
+        if trading_signals:
+            logger.info(f"Executing trading signals: {trading_signals}")
+        if not user_actions and not trading_signals:
+            logger.info(f"Executing {parsed_inputs.task.name} DAG's executable actions")
+
+    @staticmethod
+    async def _process_pending_priority_actions_and_reschedule(
+        parsed_inputs: params.AutomationWorkflowInputs,
+        previous_iteration_result: params.AutomationWorkflowIterationResult
+    ) -> tuple[bool, params.AutomationWorkflowIterationResult]:
+        if (
+            not previous_iteration_result.has_next_actions
+            and not previous_iteration_result.progress_status.postponed_iteration
+        ):
+            return False, previous_iteration_result
+        # In case new priority actions were sent, execute them now.
+        # Any action sent to this workflow will be lost if not processed by it.
+        latest_iteration_result: params.AutomationWorkflowIterationResult = previous_iteration_result
+        while new_actions_update := await AutomationWorkflow._wait_and_trigger_on_actions_update(
+            parsed_inputs, 0
+        ):
+            if AutomationWorkflow._is_forced_trigger_update(new_actions_update):
+                AutomationWorkflow.get_logger(parsed_inputs).info(
+                    "Ignoring forced_trigger received after iteration completed; skipping duplicate iteration."
+                )
+                continue
+            extra_iteration_inputs = AutomationWorkflow._create_next_iteration_inputs(
+                parsed_inputs, latest_iteration_result.next_iteration_description, 0,
+                latest_iteration_result.next_iteration_description_metadata,
+            )
+            # execute the iteration on the updated state from last iteration
+            raw_iteration_result = await AutomationWorkflow.execute_iteration(extra_iteration_inputs, new_actions_update)
+            # use the new inputs for the next iteration of this loop
+            parsed_inputs = params.AutomationWorkflowInputs.from_dict(extra_iteration_inputs)
+            latest_iteration_result = params.AutomationWorkflowIterationResult.from_dict(raw_iteration_result)
+            if not AutomationWorkflow._should_continue_workflow(parsed_inputs, latest_iteration_result.progress_status, False):
+                return False, latest_iteration_result
+            if not latest_iteration_result.has_next_actions:
+                raise errors.WorkflowPriorityActionExecutionError(
+                    f"Unexpected error: no next iteration description after processing priority actions: {latest_iteration_result}"
+                )
+        if latest_iteration_result.progress_status.should_stop:
+            AutomationWorkflow.get_logger(parsed_inputs).info(
+                f"Stopping workflow, should stop: {latest_iteration_result.progress_status.should_stop}"
+            )
+            return False, latest_iteration_result
+        # successful iteration and a new iteration is required, schedule next iteration, don't return anything
+        await AutomationWorkflow._schedule_next_iteration(
+            parsed_inputs,
+            latest_iteration_result.next_iteration_description,  # type: ignore
+            latest_iteration_result.progress_status,
+            latest_iteration_result.next_iteration_description_metadata,
+        )
+        return True, latest_iteration_result
+
+    @staticmethod
+    async def _schedule_next_iteration(
+        parsed_inputs: params.AutomationWorkflowInputs,
+        next_iteration_description: str,
+        progress_status: params.ProgressStatus,
+        next_iteration_description_metadata: typing.Optional[str] = None,
+    ):
+        next_execution_time = progress_status.next_step_at or 0
+        next_iteration_inputs = AutomationWorkflow._create_next_iteration_inputs(
+            parsed_inputs, next_iteration_description, next_execution_time, next_iteration_description_metadata
+        )
+        delay = next_execution_time - time.time()
+        delay_str = f", starting in {delay:.2f} seconds" if delay > 0 else ""
+        AutomationWorkflow.get_logger(parsed_inputs).info(
+            f"Enqueuing next iteration: next step: {progress_status.next_step}, "
+            f"remaining steps: {progress_status.remaining_steps}{delay_str}."
+        )
+        next_workflow_id = AutomationWorkflow._get_next_child_workflow_id()
+        with SCHEDULER.SetWorkflowID(next_workflow_id):
+            await SCHEDULER.INSTANCE.enqueue_workflow_async(
+                octobot_node.enums.SchedulerQueues.AUTOMATION_WORKFLOW_QUEUE.value,
+                AutomationWorkflow.execute_automation,
+                inputs=next_iteration_inputs,
+            )
+
+    @staticmethod
+    def _get_next_child_workflow_id() -> str:
+        workflow_id = dbos.DBOS.workflow_id
+        if workflow_id is None:
+            raise errors.WorkflowInputError(
+                "Missing current workflow ID while scheduling next iteration."
+            )
+        try:
+            return workflows_util.build_next_child_automation_workflow_id(workflow_id)
+        except ValueError as error:
+            raise errors.WorkflowInputError(str(error)) from error
+
+    @staticmethod
+    def _create_next_iteration_inputs(
+        parsed_inputs: params.AutomationWorkflowInputs,
+        next_iteration_description: str,
+        next_execution_time: float,
+        next_iteration_description_metadata: typing.Optional[str] = None,
+    ) -> dict:
+        # update task.content with the next iteration description containing the automation state
+        next_task = parsed_inputs.task
+        next_task.content = next_iteration_description
+        next_task.content_metadata = next_iteration_description_metadata
+        next_execution_time = next_execution_time or 0
+        return params.AutomationWorkflowInputs(
+            task=parsed_inputs.task, execution_time=next_execution_time
+        ).to_dict(include_default_values=False)
+
+    @staticmethod
+    def _should_continue_workflow(
+        parsed_inputs: params.AutomationWorkflowInputs,
+        progress_status: params.ProgressStatus,
+        stop_on_error: bool
+    ) -> bool:
+        if progress_status.postponed_iteration:
+            return True
+        if progress_status.error:
+            # failed iteration, return global progress where it stopped and exit workflow
+            AutomationWorkflow.get_logger(parsed_inputs).error(
+                f"Automation stopped: unrecoverable iteration error: {progress_status.error}. "
+                f"Iteration's last step: {progress_status.latest_step}"
+            )
+            AutomationWorkflow._record_automation_run_errored(
+                parsed_inputs,
+                error_status=progress_status.error,
+                error_origin="terminal_iteration",
+                error=Exception(progress_status.error_message or progress_status.error),
+                retriable=False,
+            )
+            return stop_on_error
+        elif progress_status.should_stop:
+            AutomationWorkflow.get_logger(parsed_inputs).info(
+                f"Workflow stop required: stopping workflow"
+            )
+            return False
+        return True
+
+    @staticmethod
+    def _get_actions_summary(actions: list["octobot_flow.entities.AbstractActionDetails"], minimal: bool = False) -> str:
+        return ", ".join([action.get_summary(minimal=minimal) for action in actions]) if actions else ""
+
+    @staticmethod
+    def _resolve_automation_id(parsed_inputs: params.AutomationWorkflowInputs) -> str | None:
+        try:
+            automation_state = automation_states_loader.get_automation_dict(parsed_inputs.task.content)
+            return automation_state.get("automation", {}).get("metadata", {}).get("automation_id")
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _record_automation_run_errored(
+        parsed_inputs: params.AutomationWorkflowInputs,
+        *,
+        error_status: str,
+        error_origin: str,
+        error: BaseException,
+        retriable: bool,
+    ) -> None:
+        automation_id = AutomationWorkflow._resolve_automation_id(parsed_inputs)
+        if automation_id is None:
+            return
+        node_journal.record_automation_run_errored(
+            automation_id=automation_id,
+            error_status=error_status,
+            error_origin=error_origin,
+            error=error,
+            retriable=retriable,
+        )
+
+    @staticmethod
+    def _get_failed_error_status(error: Exception) -> str:
+        if isinstance(error, errors.WorkflowActionExecutionError):
+            return error.ERROR_MESSAGE
+        if isinstance(error, dbos.error.DBOSMaxStepRetriesExceeded):
+            last_error = error.errors[-1]
+            if isinstance(last_error, octobot_flow.errors.InvalidAutomationActionError):
+                return octobot_flow.enums.AutomationWorkflowErrorStatus.INVALID_ACTION_CONFIGURATION.value
+        return octobot_flow.enums.AutomationWorkflowErrorStatus.EXCEPTION_DURING_ITERATION.value
+
+    @staticmethod
+    def get_logger(
+        parsed_inputs: typing.Optional[params.AutomationWorkflowInputs],
+    ) -> octobot_commons.logging.BotLogger:
+        if parsed_inputs is not None:
+            return octobot_commons.logging.get_logger(
+                parsed_inputs.task.name or AutomationWorkflow.__name__
+            )
+        return octobot_commons.logging.get_logger(AutomationWorkflow.__name__)
+
+    @staticmethod
+    def _get_postponed_iteration_error_status_and_delay(error: Exception) -> tuple[
+        octobot_flow.enums.ActionErrorStatus, float
+    ]:
+        if isinstance(error, octobot_trading.errors.AuthenticationError):
+            return octobot_flow.enums.ActionErrorStatus.AUTHENTICATION_ERROR, constants.INVALID_AUTHENTICATION_RETRY_DELAY_SECONDS
+        if isinstance(error, octobot_trading.errors.MissingFunds):
+            return octobot_flow.enums.ActionErrorStatus.NOT_ENOUGH_FUNDS, constants.DEFAULT_WORKFLOW_RESCHEDULE_IN_SECONDS
+        if isinstance(error, octobot_trading.errors.MissingMinimalExchangeTradeVolume):
+            return octobot_flow.enums.ActionErrorStatus.INVALID_ORDER, constants.DEFAULT_WORKFLOW_RESCHEDULE_IN_SECONDS
+        # other errors, like PortfolioNegativeValueError and FailedRequest
+        return octobot_flow.enums.ActionErrorStatus.INTERNAL_ERROR, constants.DEFAULT_WORKFLOW_RESCHEDULE_IN_SECONDS

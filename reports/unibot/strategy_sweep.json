@@ -1,0 +1,4422 @@
+{
+  "generated_at": "2026-10-22T06:49:43.079815+00:00",
+  "grid": {
+    "trend_breakout": [
+      {
+        "donchian": 20,
+        "trend_ema": 100,
+        "stop_atr": 2.5,
+        "trail_atr": 3.0,
+        "min_atr_pct": 1.0
+      },
+      {
+        "donchian": 35,
+        "trend_ema": 100,
+        "stop_atr": 2.8,
+        "trail_atr": 3.4,
+        "min_atr_pct": 1.0
+      },
+      {
+        "donchian": 55,
+        "trend_ema": 100,
+        "stop_atr": 3.0,
+        "trail_atr": 4.0,
+        "min_atr_pct": 0.8
+      }
+    ],
+    "trend_pullback": [
+      {
+        "ema_fast": 50,
+        "ema_slow": 200,
+        "rsi_reclaim": 35.0,
+        "stop_atr": 2.5,
+        "trail_atr": 3.2
+      },
+      {
+        "ema_fast": 50,
+        "ema_slow": 200,
+        "rsi_reclaim": 42.0,
+        "stop_atr": 2.5,
+        "trail_atr": 3.2
+      },
+      {
+        "ema_fast": 20,
+        "ema_slow": 100,
+        "rsi_reclaim": 40.0,
+        "stop_atr": 2.2,
+        "trail_atr": 2.8
+      }
+    ],
+    "mean_reversion": [
+      {
+        "bb_window": 20,
+        "bb_std": 2.0,
+        "rsi_entry": 30.0,
+        "adx_max": 22.0,
+        "stop_atr": 2.4
+      },
+      {
+        "bb_window": 20,
+        "bb_std": 2.4,
+        "rsi_entry": 28.0,
+        "adx_max": 20.0,
+        "stop_atr": 2.6
+      },
+      {
+        "bb_window": 20,
+        "bb_std": 2.0,
+        "rsi_entry": 32.0,
+        "adx_max": 24.0,
+        "stop_atr": 2.2
+      }
+    ]
+  },
+  "selection_rule": "highest test-slice return/drawdown with >=5 trades; train slice never used for selection",
+  "results": [
+    {
+      "symbol": "BTC/USD",
+      "selected": {
+        "symbol": "BTC/USD",
+        "strategy": "trend_breakout",
+        "params": {
+          "donchian": 20,
+          "trend_ema": 100,
+          "stop_atr": 2.5,
+          "trail_atr": 3.0,
+          "min_atr_pct": 1.0
+        },
+        "train": {
+          "net_return_pct": -8.242276,
+          "max_drawdown_pct": 12.03355,
+          "sharpe": -0.482121,
+          "trades": 50,
+          "win_rate_pct": 32.0,
+          "profit_factor": 0.674697,
+          "expectancy_per_trade": -0.164846,
+          "avg_holding_hours": 94.48,
+          "total_fees": 5.4639,
+          "exposure_pct": 15.21,
+          "calmar": -0.199288
+        },
+        "test": {
+          "net_return_pct": 1.359954,
+          "max_drawdown_pct": 6.51131,
+          "sharpe": 0.156575,
+          "trades": 25,
+          "win_rate_pct": 28.0,
+          "profit_factor": 1.108843,
+          "expectancy_per_trade": 0.054398,
+          "avg_holding_hours": 99.84,
+          "total_fees": 3.7829,
+          "exposure_pct": 14.0,
+          "calmar": 0.102482
+        },
+        "score": 0.209,
+        "status": "selected"
+      },
+      "candidates": [
+        {
+          "symbol": "BTC/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 20,
+            "trend_ema": 100,
+            "stop_atr": 2.5,
+            "trail_atr": 3.0,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": -8.242276,
+            "max_drawdown_pct": 12.03355,
+            "sharpe": -0.482121,
+            "trades": 50,
+            "win_rate_pct": 32.0,
+            "profit_factor": 0.674697,
+            "expectancy_per_trade": -0.164846,
+            "avg_holding_hours": 94.48,
+            "total_fees": 5.4639,
+            "exposure_pct": 15.21,
+            "calmar": -0.199288
+          },
+          "test": {
+            "net_return_pct": 1.359954,
+            "max_drawdown_pct": 6.51131,
+            "sharpe": 0.156575,
+            "trades": 25,
+            "win_rate_pct": 28.0,
+            "profit_factor": 1.108843,
+            "expectancy_per_trade": 0.054398,
+            "avg_holding_hours": 99.84,
+            "total_fees": 3.7829,
+            "exposure_pct": 14.0,
+            "calmar": 0.102482
+          },
+          "score": 0.209,
+          "status": "selected"
+        },
+        {
+          "symbol": "BTC/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 35,
+            "trend_ema": 100,
+            "stop_atr": 2.8,
+            "trail_atr": 3.4,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": -5.223373,
+            "max_drawdown_pct": 8.731008,
+            "sharpe": -0.328791,
+            "trades": 44,
+            "win_rate_pct": 34.090909,
+            "profit_factor": 0.724627,
+            "expectancy_per_trade": -0.118713,
+            "avg_holding_hours": 120.363636,
+            "total_fees": 4.1105,
+            "exposure_pct": 17.06,
+            "calmar": -0.172086
+          },
+          "test": {
+            "net_return_pct": -0.454356,
+            "max_drawdown_pct": 7.155509,
+            "sharpe": -0.031313,
+            "trades": 22,
+            "win_rate_pct": 27.272727,
+            "profit_factor": 0.959478,
+            "expectancy_per_trade": -0.020653,
+            "avg_holding_hours": 123.090909,
+            "total_fees": 2.8338,
+            "exposure_pct": 15.19,
+            "calmar": -0.0313
+          },
+          "score": -1.063,
+          "status": "rejected"
+        },
+        {
+          "symbol": "BTC/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 55,
+            "trend_ema": 100,
+            "stop_atr": 3.0,
+            "trail_atr": 4.0,
+            "min_atr_pct": 0.8
+          },
+          "train": {
+            "net_return_pct": 4.104009,
+            "max_drawdown_pct": 9.417261,
+            "sharpe": 0.268518,
+            "trades": 37,
+            "win_rate_pct": 32.432432,
+            "profit_factor": 1.222695,
+            "expectancy_per_trade": 0.110919,
+            "avg_holding_hours": 143.891892,
+            "total_fees": 3.5128,
+            "exposure_pct": 17.15,
+            "calmar": 0.121208
+          },
+          "test": {
+            "net_return_pct": 0.910318,
+            "max_drawdown_pct": 5.744895,
+            "sharpe": 0.114896,
+            "trades": 22,
+            "win_rate_pct": 27.272727,
+            "profit_factor": 1.074235,
+            "expectancy_per_trade": 0.041378,
+            "avg_holding_hours": 159.636364,
+            "total_fees": 3.0392,
+            "exposure_pct": 19.73,
+            "calmar": 0.077839
+          },
+          "score": 0.158,
+          "status": "rejected"
+        },
+        {
+          "symbol": "BTC/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 35.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": 0.233785,
+            "max_drawdown_pct": 5.528125,
+            "sharpe": 0.037379,
+            "trades": 28,
+            "win_rate_pct": 28.571429,
+            "profit_factor": 1.020845,
+            "expectancy_per_trade": 0.008349,
+            "avg_holding_hours": 75.285714,
+            "total_fees": 3.0727,
+            "exposure_pct": 6.79,
+            "calmar": 0.011924
+          },
+          "test": {
+            "net_return_pct": -1.054744,
+            "max_drawdown_pct": 5.330001,
+            "sharpe": -0.138057,
+            "trades": 12,
+            "win_rate_pct": 16.666667,
+            "profit_factor": 0.804608,
+            "expectancy_per_trade": -0.087895,
+            "avg_holding_hours": 75.333333,
+            "total_fees": 1.7452,
+            "exposure_pct": 5.08,
+            "calmar": -0.097695
+          },
+          "score": -1.198,
+          "status": "rejected"
+        },
+        {
+          "symbol": "BTC/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 42.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -9.802473,
+            "max_drawdown_pct": 12.523133,
+            "sharpe": -0.895334,
+            "trades": 37,
+            "win_rate_pct": 21.621622,
+            "profit_factor": 0.486494,
+            "expectancy_per_trade": -0.264932,
+            "avg_holding_hours": 81.945946,
+            "total_fees": 4.0525,
+            "exposure_pct": 9.76,
+            "calmar": -0.229124
+          },
+          "test": {
+            "net_return_pct": -6.189789,
+            "max_drawdown_pct": 10.374527,
+            "sharpe": -0.687829,
+            "trades": 29,
+            "win_rate_pct": 20.689655,
+            "profit_factor": 0.580993,
+            "expectancy_per_trade": -0.213441,
+            "avg_holding_hours": 61.37931,
+            "total_fees": 4.24,
+            "exposure_pct": 10.0,
+            "calmar": -0.298524
+          },
+          "score": -1.597,
+          "status": "rejected"
+        },
+        {
+          "symbol": "BTC/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 20,
+            "ema_slow": 100,
+            "rsi_reclaim": 40.0,
+            "stop_atr": 2.2,
+            "trail_atr": 2.8
+          },
+          "train": {
+            "net_return_pct": -11.116499,
+            "max_drawdown_pct": 12.266212,
+            "sharpe": -1.195343,
+            "trades": 30,
+            "win_rate_pct": 20.0,
+            "profit_factor": 0.283914,
+            "expectancy_per_trade": -0.37055,
+            "avg_holding_hours": 54.8,
+            "total_fees": 3.298,
+            "exposure_pct": 5.29,
+            "calmar": -0.266648
+          },
+          "test": {
+            "net_return_pct": -4.405568,
+            "max_drawdown_pct": 6.91452,
+            "sharpe": -0.801264,
+            "trades": 17,
+            "win_rate_pct": 17.647059,
+            "profit_factor": 0.444797,
+            "expectancy_per_trade": -0.259151,
+            "avg_holding_hours": 36.941176,
+            "total_fees": 2.6136,
+            "exposure_pct": 3.53,
+            "calmar": -0.317295
+          },
+          "score": -1.637,
+          "status": "rejected"
+        },
+        {
+          "symbol": "BTC/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 30.0,
+            "adx_max": 22.0,
+            "stop_atr": 2.4
+          },
+          "train": {
+            "net_return_pct": -4.108359,
+            "max_drawdown_pct": 4.108359,
+            "sharpe": -1.401831,
+            "trades": 6,
+            "win_rate_pct": 16.666667,
+            "profit_factor": 0.003751,
+            "expectancy_per_trade": -0.684727,
+            "avg_holding_hours": 78.666667,
+            "total_fees": 0.6396,
+            "exposure_pct": 1.52,
+            "calmar": -0.286453
+          },
+          "test": {
+            "net_return_pct": 0.114898,
+            "max_drawdown_pct": 1.964939,
+            "sharpe": 0.042964,
+            "trades": 7,
+            "win_rate_pct": 57.142857,
+            "profit_factor": 1.037193,
+            "expectancy_per_trade": 0.016414,
+            "avg_holding_hours": 21.142857,
+            "total_fees": 0.983,
+            "exposure_pct": 0.83,
+            "calmar": 0.028782
+          },
+          "score": 0.034,
+          "status": "rejected"
+        },
+        {
+          "symbol": "BTC/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.4,
+            "rsi_entry": 28.0,
+            "adx_max": 20.0,
+            "stop_atr": 2.6
+          },
+          "train": {
+            "net_return_pct": -0.657601,
+            "max_drawdown_pct": 0.657601,
+            "sharpe": -0.531104,
+            "trades": 1,
+            "win_rate_pct": 0.0,
+            "profit_factor": 0.0,
+            "expectancy_per_trade": -0.657601,
+            "avg_holding_hours": 0.0,
+            "total_fees": 0.042,
+            "exposure_pct": 0.0,
+            "calmar": -0.28286
+          },
+          "test": {
+            "net_return_pct": 0.754544,
+            "max_drawdown_pct": 0.360192,
+            "sharpe": 0.786188,
+            "trades": 1,
+            "win_rate_pct": 100.0,
+            "profit_factor": Infinity,
+            "expectancy_per_trade": 0.754544,
+            "avg_holding_hours": 48.0,
+            "total_fees": 0.1208,
+            "exposure_pct": 0.27,
+            "calmar": 1.02945
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "BTC/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 32.0,
+            "adx_max": 24.0,
+            "stop_atr": 2.2
+          },
+          "train": {
+            "net_return_pct": -5.223852,
+            "max_drawdown_pct": 5.223852,
+            "sharpe": -1.207385,
+            "trades": 9,
+            "win_rate_pct": 22.222222,
+            "profit_factor": 0.177083,
+            "expectancy_per_trade": -0.580428,
+            "avg_holding_hours": 60.888889,
+            "total_fees": 0.9935,
+            "exposure_pct": 1.76,
+            "calmar": -0.287646
+          },
+          "test": {
+            "net_return_pct": 0.718749,
+            "max_drawdown_pct": 3.717728,
+            "sharpe": 0.177531,
+            "trades": 11,
+            "win_rate_pct": 63.636364,
+            "profit_factor": 1.161122,
+            "expectancy_per_trade": 0.065341,
+            "avg_holding_hours": 28.727273,
+            "total_fees": 1.9256,
+            "exposure_pct": 1.78,
+            "calmar": 0.095015
+          },
+          "score": 0.193,
+          "status": "rejected"
+        }
+      ]
+    },
+    {
+      "symbol": "ETH/USD",
+      "selected": {
+        "symbol": "ETH/USD",
+        "strategy": "trend_breakout",
+        "params": {
+          "donchian": 35,
+          "trend_ema": 100,
+          "stop_atr": 2.8,
+          "trail_atr": 3.4,
+          "min_atr_pct": 1.0
+        },
+        "train": {
+          "net_return_pct": 11.679068,
+          "max_drawdown_pct": 8.425114,
+          "sharpe": 0.619373,
+          "trades": 42,
+          "win_rate_pct": 33.333333,
+          "profit_factor": 1.626816,
+          "expectancy_per_trade": 0.278073,
+          "avg_holding_hours": 139.238095,
+          "total_fees": 3.9327,
+          "exposure_pct": 18.81,
+          "calmar": 0.375799
+        },
+        "test": {
+          "net_return_pct": 11.015105,
+          "max_drawdown_pct": 4.688184,
+          "sharpe": 0.877279,
+          "trades": 27,
+          "win_rate_pct": 33.333333,
+          "profit_factor": 1.862651,
+          "expectancy_per_trade": 0.407967,
+          "avg_holding_hours": 119.555556,
+          "total_fees": 2.7114,
+          "exposure_pct": 18.13,
+          "calmar": 1.126158
+        },
+        "score": 2.35,
+        "status": "selected"
+      },
+      "candidates": [
+        {
+          "symbol": "ETH/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 20,
+            "trend_ema": 100,
+            "stop_atr": 2.5,
+            "trail_atr": 3.0,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": 7.316787,
+            "max_drawdown_pct": 8.306844,
+            "sharpe": 0.356296,
+            "trades": 61,
+            "win_rate_pct": 34.42623,
+            "profit_factor": 1.260912,
+            "expectancy_per_trade": 0.119947,
+            "avg_holding_hours": 99.344262,
+            "total_fees": 6.2776,
+            "exposure_pct": 19.49,
+            "calmar": 0.242292
+          },
+          "test": {
+            "net_return_pct": 6.110649,
+            "max_drawdown_pct": 7.794447,
+            "sharpe": 0.451427,
+            "trades": 42,
+            "win_rate_pct": 23.809524,
+            "profit_factor": 1.26938,
+            "expectancy_per_trade": 0.145492,
+            "avg_holding_hours": 82.285714,
+            "total_fees": 4.5627,
+            "exposure_pct": 19.42,
+            "calmar": 0.380189
+          },
+          "score": 0.784,
+          "status": "rejected"
+        },
+        {
+          "symbol": "ETH/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 35,
+            "trend_ema": 100,
+            "stop_atr": 2.8,
+            "trail_atr": 3.4,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": 11.679068,
+            "max_drawdown_pct": 8.425114,
+            "sharpe": 0.619373,
+            "trades": 42,
+            "win_rate_pct": 33.333333,
+            "profit_factor": 1.626816,
+            "expectancy_per_trade": 0.278073,
+            "avg_holding_hours": 139.238095,
+            "total_fees": 3.9327,
+            "exposure_pct": 18.81,
+            "calmar": 0.375799
+          },
+          "test": {
+            "net_return_pct": 11.015105,
+            "max_drawdown_pct": 4.688184,
+            "sharpe": 0.877279,
+            "trades": 27,
+            "win_rate_pct": 33.333333,
+            "profit_factor": 1.862651,
+            "expectancy_per_trade": 0.407967,
+            "avg_holding_hours": 119.555556,
+            "total_fees": 2.7114,
+            "exposure_pct": 18.13,
+            "calmar": 1.126158
+          },
+          "score": 2.35,
+          "status": "selected"
+        },
+        {
+          "symbol": "ETH/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 55,
+            "trend_ema": 100,
+            "stop_atr": 3.0,
+            "trail_atr": 4.0,
+            "min_atr_pct": 0.8
+          },
+          "train": {
+            "net_return_pct": 9.084613,
+            "max_drawdown_pct": 7.224182,
+            "sharpe": 0.537266,
+            "trades": 35,
+            "win_rate_pct": 37.142857,
+            "profit_factor": 1.598843,
+            "expectancy_per_trade": 0.25956,
+            "avg_holding_hours": 157.942857,
+            "total_fees": 2.9496,
+            "exposure_pct": 17.78,
+            "calmar": 0.343861
+          },
+          "test": {
+            "net_return_pct": 10.620287,
+            "max_drawdown_pct": 5.852274,
+            "sharpe": 0.914019,
+            "trades": 21,
+            "win_rate_pct": 42.857143,
+            "profit_factor": 2.007392,
+            "expectancy_per_trade": 0.505728,
+            "avg_holding_hours": 162.857143,
+            "total_fees": 1.9739,
+            "exposure_pct": 19.21,
+            "calmar": 0.870622
+          },
+          "score": 1.815,
+          "status": "rejected"
+        },
+        {
+          "symbol": "ETH/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 35.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -3.846215,
+            "max_drawdown_pct": 5.56101,
+            "sharpe": -0.505466,
+            "trades": 17,
+            "win_rate_pct": 23.529412,
+            "profit_factor": 0.512557,
+            "expectancy_per_trade": -0.226248,
+            "avg_holding_hours": 72.705882,
+            "total_fees": 1.61,
+            "exposure_pct": 3.98,
+            "calmar": -0.19793
+          },
+          "test": {
+            "net_return_pct": 7.428135,
+            "max_drawdown_pct": 1.905411,
+            "sharpe": 1.107879,
+            "trades": 9,
+            "win_rate_pct": 66.666667,
+            "profit_factor": 8.494473,
+            "expectancy_per_trade": 0.825348,
+            "avg_holding_hours": 103.555556,
+            "total_fees": 0.8589,
+            "exposure_pct": 5.24,
+            "calmar": 1.884544
+          },
+          "score": 2.228,
+          "status": "rejected"
+        },
+        {
+          "symbol": "ETH/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 42.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -1.317997,
+            "max_drawdown_pct": 9.737386,
+            "sharpe": -0.096335,
+            "trades": 41,
+            "win_rate_pct": 31.707317,
+            "profit_factor": 0.925624,
+            "expectancy_per_trade": -0.032146,
+            "avg_holding_hours": 90.04878,
+            "total_fees": 4.0131,
+            "exposure_pct": 11.87,
+            "calmar": -0.038378
+          },
+          "test": {
+            "net_return_pct": 2.943242,
+            "max_drawdown_pct": 4.72854,
+            "sharpe": 0.341869,
+            "trades": 27,
+            "win_rate_pct": 37.037037,
+            "profit_factor": 1.313521,
+            "expectancy_per_trade": 0.109009,
+            "avg_holding_hours": 84.0,
+            "total_fees": 2.74,
+            "exposure_pct": 12.74,
+            "calmar": 0.30421
+          },
+          "score": 0.622,
+          "status": "rejected"
+        },
+        {
+          "symbol": "ETH/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 20,
+            "ema_slow": 100,
+            "rsi_reclaim": 40.0,
+            "stop_atr": 2.2,
+            "trail_atr": 2.8
+          },
+          "train": {
+            "net_return_pct": 2.014736,
+            "max_drawdown_pct": 5.054512,
+            "sharpe": 0.192521,
+            "trades": 35,
+            "win_rate_pct": 34.285714,
+            "profit_factor": 1.169522,
+            "expectancy_per_trade": 0.057564,
+            "avg_holding_hours": 58.971429,
+            "total_fees": 3.6756,
+            "exposure_pct": 6.65,
+            "calmar": 0.111678
+          },
+          "test": {
+            "net_return_pct": -2.010055,
+            "max_drawdown_pct": 4.610628,
+            "sharpe": -0.302306,
+            "trades": 12,
+            "win_rate_pct": 25.0,
+            "profit_factor": 0.523457,
+            "expectancy_per_trade": -0.167505,
+            "avg_holding_hours": 80.666667,
+            "total_fees": 1.4659,
+            "exposure_pct": 5.44,
+            "calmar": -0.215757
+          },
+          "score": -1.436,
+          "status": "rejected"
+        },
+        {
+          "symbol": "ETH/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 30.0,
+            "adx_max": 22.0,
+            "stop_atr": 2.4
+          },
+          "train": {
+            "net_return_pct": -2.639602,
+            "max_drawdown_pct": 3.325326,
+            "sharpe": -0.657725,
+            "trades": 12,
+            "win_rate_pct": 41.666667,
+            "profit_factor": 0.386356,
+            "expectancy_per_trade": -0.219967,
+            "avg_holding_hours": 52.333333,
+            "total_fees": 1.0011,
+            "exposure_pct": 2.02,
+            "calmar": -0.226155
+          },
+          "test": {
+            "net_return_pct": -1.087177,
+            "max_drawdown_pct": 1.41521,
+            "sharpe": -0.438738,
+            "trades": 4,
+            "win_rate_pct": 50.0,
+            "profit_factor": 0.50614,
+            "expectancy_per_trade": -0.271794,
+            "avg_holding_hours": 36.0,
+            "total_fees": 0.4274,
+            "exposure_pct": 0.81,
+            "calmar": -0.379286
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "ETH/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.4,
+            "rsi_entry": 28.0,
+            "adx_max": 20.0,
+            "stop_atr": 2.6
+          },
+          "train": {
+            "net_return_pct": -0.87942,
+            "max_drawdown_pct": 1.349206,
+            "sharpe": -0.317406,
+            "trades": 6,
+            "win_rate_pct": 33.333333,
+            "profit_factor": 0.487536,
+            "expectancy_per_trade": -0.14657,
+            "avg_holding_hours": 60.0,
+            "total_fees": 0.4573,
+            "exposure_pct": 1.16,
+            "calmar": -0.184518
+          },
+          "test": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "ETH/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 32.0,
+            "adx_max": 24.0,
+            "stop_atr": 2.2
+          },
+          "train": {
+            "net_return_pct": -6.910014,
+            "max_drawdown_pct": 6.97857,
+            "sharpe": -1.151343,
+            "trades": 24,
+            "win_rate_pct": 37.5,
+            "profit_factor": 0.330268,
+            "expectancy_per_trade": -0.287917,
+            "avg_holding_hours": 43.333333,
+            "total_fees": 2.3546,
+            "exposure_pct": 3.35,
+            "calmar": -0.286637
+          },
+          "test": {
+            "net_return_pct": -3.682294,
+            "max_drawdown_pct": 3.817531,
+            "sharpe": -1.025349,
+            "trades": 8,
+            "win_rate_pct": 37.5,
+            "profit_factor": 0.280914,
+            "expectancy_per_trade": -0.460287,
+            "avg_holding_hours": 26.5,
+            "total_fees": 0.7956,
+            "exposure_pct": 1.19,
+            "calmar": -0.479442
+          },
+          "score": -1.179,
+          "status": "rejected"
+        }
+      ]
+    },
+    {
+      "symbol": "SOL/USD",
+      "selected": {
+        "symbol": "SOL/USD",
+        "strategy": "trend_breakout",
+        "params": {
+          "donchian": 35,
+          "trend_ema": 100,
+          "stop_atr": 2.8,
+          "trail_atr": 3.4,
+          "min_atr_pct": 1.0
+        },
+        "train": {
+          "net_return_pct": 0.723246,
+          "max_drawdown_pct": 5.016133,
+          "sharpe": 0.128833,
+          "trades": 19,
+          "win_rate_pct": 21.052632,
+          "profit_factor": 1.088293,
+          "expectancy_per_trade": 0.038066,
+          "avg_holding_hours": 94.315789,
+          "total_fees": 1.3957,
+          "exposure_pct": 17.47,
+          "calmar": 0.12298
+        },
+        "test": {
+          "net_return_pct": 1.935303,
+          "max_drawdown_pct": 2.56721,
+          "sharpe": 0.705635,
+          "trades": 5,
+          "win_rate_pct": 60.0,
+          "profit_factor": 2.82398,
+          "expectancy_per_trade": 0.387061,
+          "avg_holding_hours": 112.8,
+          "total_fees": 0.4339,
+          "exposure_pct": 8.54,
+          "calmar": 1.003806
+        },
+        "score": 0.452,
+        "status": "selected"
+      },
+      "candidates": [
+        {
+          "symbol": "SOL/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 20,
+            "trend_ema": 100,
+            "stop_atr": 2.5,
+            "trail_atr": 3.0,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": -1.251214,
+            "max_drawdown_pct": 5.162028,
+            "sharpe": -0.14309,
+            "trades": 21,
+            "win_rate_pct": 23.809524,
+            "profit_factor": 0.854814,
+            "expectancy_per_trade": -0.059582,
+            "avg_holding_hours": 80.0,
+            "total_fees": 1.7579,
+            "exposure_pct": 16.37,
+            "calmar": -0.207042
+          },
+          "test": {
+            "net_return_pct": -1.081426,
+            "max_drawdown_pct": 4.179419,
+            "sharpe": -0.348273,
+            "trades": 9,
+            "win_rate_pct": 22.222222,
+            "profit_factor": 0.723532,
+            "expectancy_per_trade": -0.120158,
+            "avg_holding_hours": 76.444444,
+            "total_fees": 0.8757,
+            "exposure_pct": 10.42,
+            "calmar": -0.34285
+          },
+          "score": -0.755,
+          "status": "rejected"
+        },
+        {
+          "symbol": "SOL/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 35,
+            "trend_ema": 100,
+            "stop_atr": 2.8,
+            "trail_atr": 3.4,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": 0.723246,
+            "max_drawdown_pct": 5.016133,
+            "sharpe": 0.128833,
+            "trades": 19,
+            "win_rate_pct": 21.052632,
+            "profit_factor": 1.088293,
+            "expectancy_per_trade": 0.038066,
+            "avg_holding_hours": 94.315789,
+            "total_fees": 1.3957,
+            "exposure_pct": 17.47,
+            "calmar": 0.12298
+          },
+          "test": {
+            "net_return_pct": 1.935303,
+            "max_drawdown_pct": 2.56721,
+            "sharpe": 0.705635,
+            "trades": 5,
+            "win_rate_pct": 60.0,
+            "profit_factor": 2.82398,
+            "expectancy_per_trade": 0.387061,
+            "avg_holding_hours": 112.8,
+            "total_fees": 0.4339,
+            "exposure_pct": 8.54,
+            "calmar": 1.003806
+          },
+          "score": 0.452,
+          "status": "selected"
+        },
+        {
+          "symbol": "SOL/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 55,
+            "trend_ema": 100,
+            "stop_atr": 3.0,
+            "trail_atr": 4.0,
+            "min_atr_pct": 0.8
+          },
+          "train": {
+            "net_return_pct": -2.946545,
+            "max_drawdown_pct": 4.818877,
+            "sharpe": -0.448979,
+            "trades": 16,
+            "win_rate_pct": 18.75,
+            "profit_factor": 0.652226,
+            "expectancy_per_trade": -0.184159,
+            "avg_holding_hours": 104.75,
+            "total_fees": 1.0267,
+            "exposure_pct": 16.34,
+            "calmar": -0.522952
+          },
+          "test": {
+            "net_return_pct": 1.628197,
+            "max_drawdown_pct": 2.406655,
+            "sharpe": 0.662584,
+            "trades": 4,
+            "win_rate_pct": 75.0,
+            "profit_factor": 5.338368,
+            "expectancy_per_trade": 0.407049,
+            "avg_holding_hours": 189.0,
+            "total_fees": 0.3004,
+            "exposure_pct": 11.45,
+            "calmar": 0.900408
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "SOL/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 35.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -1.681342,
+            "max_drawdown_pct": 1.878771,
+            "sharpe": -1.436977,
+            "trades": 3,
+            "win_rate_pct": 0.0,
+            "profit_factor": 0.0,
+            "expectancy_per_trade": -0.560447,
+            "avg_holding_hours": 102.666667,
+            "total_fees": 0.1626,
+            "exposure_pct": 3.0,
+            "calmar": -0.764658
+          },
+          "test": {
+            "net_return_pct": 2.32242,
+            "max_drawdown_pct": 1.880026,
+            "sharpe": 0.890778,
+            "trades": 3,
+            "win_rate_pct": 66.666667,
+            "profit_factor": 5.734196,
+            "expectancy_per_trade": 0.77414,
+            "avg_holding_hours": 108.0,
+            "total_fees": 0.3243,
+            "exposure_pct": 4.91,
+            "calmar": 1.645927
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "SOL/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 42.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -5.80325,
+            "max_drawdown_pct": 6.049451,
+            "sharpe": -1.368487,
+            "trades": 18,
+            "win_rate_pct": 22.222222,
+            "profit_factor": 0.360777,
+            "expectancy_per_trade": -0.322403,
+            "avg_holding_hours": 79.555556,
+            "total_fees": 1.213,
+            "exposure_pct": 13.96,
+            "calmar": -0.822219
+          },
+          "test": {
+            "net_return_pct": -0.454683,
+            "max_drawdown_pct": 1.933866,
+            "sharpe": -0.159562,
+            "trades": 6,
+            "win_rate_pct": 16.666667,
+            "profit_factor": 0.849321,
+            "expectancy_per_trade": -0.07578,
+            "avg_holding_hours": 57.333333,
+            "total_fees": 0.6517,
+            "exposure_pct": 5.21,
+            "calmar": -0.311855
+          },
+          "score": -0.736,
+          "status": "rejected"
+        },
+        {
+          "symbol": "SOL/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 20,
+            "ema_slow": 100,
+            "rsi_reclaim": 40.0,
+            "stop_atr": 2.2,
+            "trail_atr": 2.8
+          },
+          "train": {
+            "net_return_pct": -2.341853,
+            "max_drawdown_pct": 3.093096,
+            "sharpe": -1.531432,
+            "trades": 10,
+            "win_rate_pct": 10.0,
+            "profit_factor": 0.150269,
+            "expectancy_per_trade": -0.234185,
+            "avg_holding_hours": 47.2,
+            "total_fees": 0.7209,
+            "exposure_pct": 4.6,
+            "calmar": -0.647238
+          },
+          "test": {
+            "net_return_pct": -1.899498,
+            "max_drawdown_pct": 2.781438,
+            "sharpe": -1.013827,
+            "trades": 5,
+            "win_rate_pct": 20.0,
+            "profit_factor": 0.036063,
+            "expectancy_per_trade": -0.3799,
+            "avg_holding_hours": 55.2,
+            "total_fees": 0.5993,
+            "exposure_pct": 4.18,
+            "calmar": -0.903661
+          },
+          "score": -1.01,
+          "status": "rejected"
+        },
+        {
+          "symbol": "SOL/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 30.0,
+            "adx_max": 22.0,
+            "stop_atr": 2.4
+          },
+          "train": {
+            "net_return_pct": -1.747548,
+            "max_drawdown_pct": 1.947002,
+            "sharpe": -1.474451,
+            "trades": 3,
+            "win_rate_pct": 33.333333,
+            "profit_factor": 0.213225,
+            "expectancy_per_trade": -0.582516,
+            "avg_holding_hours": 32.0,
+            "total_fees": 0.246,
+            "exposure_pct": 0.94,
+            "calmar": -0.766953
+          },
+          "test": {
+            "net_return_pct": 0.649742,
+            "max_drawdown_pct": 0.088774,
+            "sharpe": 1.006043,
+            "trades": 1,
+            "win_rate_pct": 100.0,
+            "profit_factor": Infinity,
+            "expectancy_per_trade": 0.649742,
+            "avg_holding_hours": 20.0,
+            "total_fees": 0.1176,
+            "exposure_pct": 0.3,
+            "calmar": 9.725485
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "SOL/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.4,
+            "rsi_entry": 28.0,
+            "adx_max": 20.0,
+            "stop_atr": 2.6
+          },
+          "train": {
+            "net_return_pct": -1.768188,
+            "max_drawdown_pct": 1.95229,
+            "sharpe": -1.596276,
+            "trades": 3,
+            "win_rate_pct": 33.333333,
+            "profit_factor": 0.16833,
+            "expectancy_per_trade": -0.589396,
+            "avg_holding_hours": 30.666667,
+            "total_fees": 0.2014,
+            "exposure_pct": 0.9,
+            "calmar": -0.773922
+          },
+          "test": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "SOL/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 32.0,
+            "adx_max": 24.0,
+            "stop_atr": 2.2
+          },
+          "train": {
+            "net_return_pct": -1.378196,
+            "max_drawdown_pct": 1.947038,
+            "sharpe": -0.665603,
+            "trades": 7,
+            "win_rate_pct": 42.857143,
+            "profit_factor": 0.544974,
+            "expectancy_per_trade": -0.196885,
+            "avg_holding_hours": 24.571429,
+            "total_fees": 0.5454,
+            "exposure_pct": 1.68,
+            "calmar": -0.604678
+          },
+          "test": {
+            "net_return_pct": -0.527993,
+            "max_drawdown_pct": 1.323688,
+            "sharpe": -0.405071,
+            "trades": 2,
+            "win_rate_pct": 50.0,
+            "profit_factor": 0.573098,
+            "expectancy_per_trade": -0.263997,
+            "avg_holding_hours": 18.0,
+            "total_fees": 0.287,
+            "exposure_pct": 0.55,
+            "calmar": -0.529006
+          },
+          "score": -999.0,
+          "status": "rejected"
+        }
+      ]
+    },
+    {
+      "symbol": "AVAX/USD",
+      "selected": {
+        "symbol": "AVAX/USD",
+        "strategy": "trend_breakout",
+        "params": {
+          "donchian": 55,
+          "trend_ema": 100,
+          "stop_atr": 3.0,
+          "trail_atr": 4.0,
+          "min_atr_pct": 0.8
+        },
+        "train": {
+          "net_return_pct": -3.767884,
+          "max_drawdown_pct": 8.219247,
+          "sharpe": -0.295269,
+          "trades": 28,
+          "win_rate_pct": 21.428571,
+          "profit_factor": 0.715995,
+          "expectancy_per_trade": -0.134567,
+          "avg_holding_hours": 122.142857,
+          "total_fees": 1.3182,
+          "exposure_pct": 13.13,
+          "calmar": -0.156196
+        },
+        "test": {
+          "net_return_pct": 6.382915,
+          "max_drawdown_pct": 2.934967,
+          "sharpe": 0.654033,
+          "trades": 10,
+          "win_rate_pct": 50.0,
+          "profit_factor": 2.920575,
+          "expectancy_per_trade": 0.638292,
+          "avg_holding_hours": 142.4,
+          "total_fees": 0.7067,
+          "exposure_pct": 9.43,
+          "calmar": 1.245444
+        },
+        "score": 2.175,
+        "status": "selected"
+      },
+      "candidates": [
+        {
+          "symbol": "AVAX/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 20,
+            "trend_ema": 100,
+            "stop_atr": 2.5,
+            "trail_atr": 3.0,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": -11.282298,
+            "max_drawdown_pct": 12.062298,
+            "sharpe": -1.192751,
+            "trades": 29,
+            "win_rate_pct": 20.689655,
+            "profit_factor": 0.281736,
+            "expectancy_per_trade": -0.389045,
+            "avg_holding_hours": 72.137931,
+            "total_fees": 1.6299,
+            "exposure_pct": 8.03,
+            "calmar": -0.327251
+          },
+          "test": {
+            "net_return_pct": 6.141018,
+            "max_drawdown_pct": 4.622698,
+            "sharpe": 0.612911,
+            "trades": 16,
+            "win_rate_pct": 43.75,
+            "profit_factor": 2.304677,
+            "expectancy_per_trade": 0.383814,
+            "avg_holding_hours": 79.75,
+            "total_fees": 1.3445,
+            "exposure_pct": 8.45,
+            "calmar": 0.761139
+          },
+          "score": 1.328,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AVAX/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 35,
+            "trend_ema": 100,
+            "stop_atr": 2.8,
+            "trail_atr": 3.4,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": -4.922929,
+            "max_drawdown_pct": 9.660687,
+            "sharpe": -0.390331,
+            "trades": 37,
+            "win_rate_pct": 24.324324,
+            "profit_factor": 0.683192,
+            "expectancy_per_trade": -0.133052,
+            "avg_holding_hours": 95.567568,
+            "total_fees": 1.9819,
+            "exposure_pct": 13.56,
+            "calmar": -0.174318
+          },
+          "test": {
+            "net_return_pct": 5.735505,
+            "max_drawdown_pct": 3.713113,
+            "sharpe": 0.608249,
+            "trades": 12,
+            "win_rate_pct": 66.666667,
+            "profit_factor": 2.575505,
+            "expectancy_per_trade": 0.477959,
+            "avg_holding_hours": 119.0,
+            "total_fees": 0.9252,
+            "exposure_pct": 9.45,
+            "calmar": 0.885742
+          },
+          "score": 1.545,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AVAX/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 55,
+            "trend_ema": 100,
+            "stop_atr": 3.0,
+            "trail_atr": 4.0,
+            "min_atr_pct": 0.8
+          },
+          "train": {
+            "net_return_pct": -3.767884,
+            "max_drawdown_pct": 8.219247,
+            "sharpe": -0.295269,
+            "trades": 28,
+            "win_rate_pct": 21.428571,
+            "profit_factor": 0.715995,
+            "expectancy_per_trade": -0.134567,
+            "avg_holding_hours": 122.142857,
+            "total_fees": 1.3182,
+            "exposure_pct": 13.13,
+            "calmar": -0.156196
+          },
+          "test": {
+            "net_return_pct": 6.382915,
+            "max_drawdown_pct": 2.934967,
+            "sharpe": 0.654033,
+            "trades": 10,
+            "win_rate_pct": 50.0,
+            "profit_factor": 2.920575,
+            "expectancy_per_trade": 0.638292,
+            "avg_holding_hours": 142.4,
+            "total_fees": 0.7067,
+            "exposure_pct": 9.43,
+            "calmar": 1.245444
+          },
+          "score": 2.175,
+          "status": "selected"
+        },
+        {
+          "symbol": "AVAX/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 35.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -3.59905,
+            "max_drawdown_pct": 4.918665,
+            "sharpe": -1.044633,
+            "trades": 12,
+            "win_rate_pct": 8.333333,
+            "profit_factor": 0.040579,
+            "expectancy_per_trade": -0.299921,
+            "avg_holding_hours": 34.0,
+            "total_fees": 0.5689,
+            "exposure_pct": 1.57,
+            "calmar": -0.249169
+          },
+          "test": {
+            "net_return_pct": -1.632293,
+            "max_drawdown_pct": 2.756191,
+            "sharpe": -0.528787,
+            "trades": 7,
+            "win_rate_pct": 14.285714,
+            "profit_factor": 0.00026,
+            "expectancy_per_trade": -0.233185,
+            "avg_holding_hours": 74.857143,
+            "total_fees": 0.3883,
+            "exposure_pct": 3.47,
+            "calmar": -0.34481
+          },
+          "score": -0.955,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AVAX/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 42.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -8.770409,
+            "max_drawdown_pct": 9.069602,
+            "sharpe": -1.281837,
+            "trades": 30,
+            "win_rate_pct": 20.0,
+            "profit_factor": 0.251309,
+            "expectancy_per_trade": -0.292347,
+            "avg_holding_hours": 66.4,
+            "total_fees": 1.5125,
+            "exposure_pct": 7.65,
+            "calmar": -0.335287
+          },
+          "test": {
+            "net_return_pct": -2.595673,
+            "max_drawdown_pct": 5.049329,
+            "sharpe": -0.424846,
+            "trades": 27,
+            "win_rate_pct": 25.925926,
+            "profit_factor": 0.697849,
+            "expectancy_per_trade": -0.096136,
+            "avg_holding_hours": 63.111111,
+            "total_fees": 1.6665,
+            "exposure_pct": 11.28,
+            "calmar": -0.299916
+          },
+          "score": -1.514,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AVAX/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 20,
+            "ema_slow": 100,
+            "rsi_reclaim": 40.0,
+            "stop_atr": 2.2,
+            "trail_atr": 2.8
+          },
+          "train": {
+            "net_return_pct": -8.57278,
+            "max_drawdown_pct": 9.577005,
+            "sharpe": -1.653631,
+            "trades": 22,
+            "win_rate_pct": 4.545455,
+            "profit_factor": 0.078004,
+            "expectancy_per_trade": -0.389672,
+            "avg_holding_hours": 34.909091,
+            "total_fees": 1.3385,
+            "exposure_pct": 2.95,
+            "calmar": -0.31015
+          },
+          "test": {
+            "net_return_pct": -1.68769,
+            "max_drawdown_pct": 2.983773,
+            "sharpe": -0.469148,
+            "trades": 9,
+            "win_rate_pct": 11.111111,
+            "profit_factor": 0.483675,
+            "expectancy_per_trade": -0.187521,
+            "avg_holding_hours": 36.0,
+            "total_fees": 0.6568,
+            "exposure_pct": 2.14,
+            "calmar": -0.329359
+          },
+          "score": -0.939,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AVAX/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 30.0,
+            "adx_max": 22.0,
+            "stop_atr": 2.4
+          },
+          "train": {
+            "net_return_pct": -4.217128,
+            "max_drawdown_pct": 4.444611,
+            "sharpe": -1.111971,
+            "trades": 7,
+            "win_rate_pct": 28.571429,
+            "profit_factor": 0.132768,
+            "expectancy_per_trade": -0.602447,
+            "avg_holding_hours": 28.571429,
+            "total_fees": 0.4567,
+            "exposure_pct": 0.77,
+            "calmar": -0.323784
+          },
+          "test": {
+            "net_return_pct": -0.363559,
+            "max_drawdown_pct": 1.454349,
+            "sharpe": -0.142849,
+            "trades": 6,
+            "win_rate_pct": 66.666667,
+            "profit_factor": 0.792384,
+            "expectancy_per_trade": -0.060593,
+            "avg_holding_hours": 51.333333,
+            "total_fees": 0.3807,
+            "exposure_pct": 2.04,
+            "calmar": -0.145155
+          },
+          "score": -0.709,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AVAX/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.4,
+            "rsi_entry": 28.0,
+            "adx_max": 20.0,
+            "stop_atr": 2.6
+          },
+          "train": {
+            "net_return_pct": -3.111693,
+            "max_drawdown_pct": 3.111693,
+            "sharpe": -0.971093,
+            "trades": 5,
+            "win_rate_pct": 20.0,
+            "profit_factor": 0.155167,
+            "expectancy_per_trade": -0.622339,
+            "avg_holding_hours": 19.2,
+            "total_fees": 0.2664,
+            "exposure_pct": 0.37,
+            "calmar": -0.339964
+          },
+          "test": {
+            "net_return_pct": 0.495404,
+            "max_drawdown_pct": 1.213163,
+            "sharpe": 0.300443,
+            "trades": 3,
+            "win_rate_pct": 66.666667,
+            "profit_factor": 1.967532,
+            "expectancy_per_trade": 0.165135,
+            "avg_holding_hours": 53.333333,
+            "total_fees": 0.2008,
+            "exposure_pct": 1.06,
+            "calmar": 0.236692
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AVAX/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 32.0,
+            "adx_max": 24.0,
+            "stop_atr": 2.2
+          },
+          "train": {
+            "net_return_pct": -6.801906,
+            "max_drawdown_pct": 6.842769,
+            "sharpe": -1.409109,
+            "trades": 13,
+            "win_rate_pct": 23.076923,
+            "profit_factor": 0.100133,
+            "expectancy_per_trade": -0.523224,
+            "avg_holding_hours": 39.076923,
+            "total_fees": 0.9758,
+            "exposure_pct": 1.95,
+            "calmar": -0.342266
+          },
+          "test": {
+            "net_return_pct": -0.235952,
+            "max_drawdown_pct": 2.044473,
+            "sharpe": -0.068165,
+            "trades": 8,
+            "win_rate_pct": 62.5,
+            "profit_factor": 0.914292,
+            "expectancy_per_trade": -0.029494,
+            "avg_holding_hours": 47.0,
+            "total_fees": 0.5336,
+            "exposure_pct": 2.49,
+            "calmar": -0.066996
+          },
+          "score": -0.669,
+          "status": "rejected"
+        }
+      ]
+    },
+    {
+      "symbol": "LINK/USD",
+      "selected": {
+        "symbol": "LINK/USD",
+        "strategy": "trend_breakout",
+        "params": {
+          "donchian": 55,
+          "trend_ema": 100,
+          "stop_atr": 3.0,
+          "trail_atr": 4.0,
+          "min_atr_pct": 0.8
+        },
+        "train": {
+          "net_return_pct": -5.016994,
+          "max_drawdown_pct": 9.656322,
+          "sharpe": -0.374789,
+          "trades": 32,
+          "win_rate_pct": 18.75,
+          "profit_factor": 0.643107,
+          "expectancy_per_trade": -0.156781,
+          "avg_holding_hours": 120.875,
+          "total_fees": 1.6216,
+          "exposure_pct": 12.46,
+          "calmar": -0.149352
+        },
+        "test": {
+          "net_return_pct": 2.831948,
+          "max_drawdown_pct": 3.529082,
+          "sharpe": 0.280663,
+          "trades": 16,
+          "win_rate_pct": 37.5,
+          "profit_factor": 1.463284,
+          "expectancy_per_trade": 0.176997,
+          "avg_holding_hours": 165.25,
+          "total_fees": 1.0657,
+          "exposure_pct": 14.86,
+          "calmar": 0.3923
+        },
+        "score": 0.802,
+        "status": "selected"
+      },
+      "candidates": [
+        {
+          "symbol": "LINK/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 20,
+            "trend_ema": 100,
+            "stop_atr": 2.5,
+            "trail_atr": 3.0,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": -6.327746,
+            "max_drawdown_pct": 11.280038,
+            "sharpe": -0.372626,
+            "trades": 52,
+            "win_rate_pct": 23.076923,
+            "profit_factor": 0.738377,
+            "expectancy_per_trade": -0.121687,
+            "avg_holding_hours": 85.230769,
+            "total_fees": 3.3497,
+            "exposure_pct": 14.28,
+            "calmar": -0.162052
+          },
+          "test": {
+            "net_return_pct": 5.3636,
+            "max_drawdown_pct": 7.809009,
+            "sharpe": 0.451139,
+            "trades": 31,
+            "win_rate_pct": 35.483871,
+            "profit_factor": 1.397685,
+            "expectancy_per_trade": 0.173019,
+            "avg_holding_hours": 83.096774,
+            "total_fees": 2.4574,
+            "exposure_pct": 14.48,
+            "calmar": 0.333693
+          },
+          "score": 0.687,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LINK/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 35,
+            "trend_ema": 100,
+            "stop_atr": 2.8,
+            "trail_atr": 3.4,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": -4.248646,
+            "max_drawdown_pct": 9.279577,
+            "sharpe": -0.266093,
+            "trades": 43,
+            "win_rate_pct": 30.232558,
+            "profit_factor": 0.771603,
+            "expectancy_per_trade": -0.098806,
+            "avg_holding_hours": 106.325581,
+            "total_fees": 2.4455,
+            "exposure_pct": 14.73,
+            "calmar": -0.131237
+          },
+          "test": {
+            "net_return_pct": 3.468096,
+            "max_drawdown_pct": 5.383262,
+            "sharpe": 0.350325,
+            "trades": 23,
+            "win_rate_pct": 43.478261,
+            "profit_factor": 1.364378,
+            "expectancy_per_trade": 0.150787,
+            "avg_holding_hours": 109.391304,
+            "total_fees": 1.5436,
+            "exposure_pct": 14.14,
+            "calmar": 0.314453
+          },
+          "score": 0.644,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LINK/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 55,
+            "trend_ema": 100,
+            "stop_atr": 3.0,
+            "trail_atr": 4.0,
+            "min_atr_pct": 0.8
+          },
+          "train": {
+            "net_return_pct": -5.016994,
+            "max_drawdown_pct": 9.656322,
+            "sharpe": -0.374789,
+            "trades": 32,
+            "win_rate_pct": 18.75,
+            "profit_factor": 0.643107,
+            "expectancy_per_trade": -0.156781,
+            "avg_holding_hours": 120.875,
+            "total_fees": 1.6216,
+            "exposure_pct": 12.46,
+            "calmar": -0.149352
+          },
+          "test": {
+            "net_return_pct": 2.831948,
+            "max_drawdown_pct": 3.529082,
+            "sharpe": 0.280663,
+            "trades": 16,
+            "win_rate_pct": 37.5,
+            "profit_factor": 1.463284,
+            "expectancy_per_trade": 0.176997,
+            "avg_holding_hours": 165.25,
+            "total_fees": 1.0657,
+            "exposure_pct": 14.86,
+            "calmar": 0.3923
+          },
+          "score": 0.802,
+          "status": "selected"
+        },
+        {
+          "symbol": "LINK/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 35.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -8.69879,
+            "max_drawdown_pct": 9.180892,
+            "sharpe": -1.469497,
+            "trades": 23,
+            "win_rate_pct": 13.043478,
+            "profit_factor": 0.177035,
+            "expectancy_per_trade": -0.378208,
+            "avg_holding_hours": 42.782609,
+            "total_fees": 1.3381,
+            "exposure_pct": 3.17,
+            "calmar": -0.276198
+          },
+          "test": {
+            "net_return_pct": -4.449871,
+            "max_drawdown_pct": 6.236058,
+            "sharpe": -1.236486,
+            "trades": 12,
+            "win_rate_pct": 8.333333,
+            "profit_factor": 0.141944,
+            "expectancy_per_trade": -0.370823,
+            "avg_holding_hours": 61.333333,
+            "total_fees": 0.6495,
+            "exposure_pct": 4.14,
+            "calmar": -0.355394
+          },
+          "score": -1.714,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LINK/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 42.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -6.08082,
+            "max_drawdown_pct": 9.672001,
+            "sharpe": -0.472486,
+            "trades": 61,
+            "win_rate_pct": 21.311475,
+            "profit_factor": 0.708686,
+            "expectancy_per_trade": -0.099686,
+            "avg_holding_hours": 61.180328,
+            "total_fees": 3.7241,
+            "exposure_pct": 11.99,
+            "calmar": -0.181451
+          },
+          "test": {
+            "net_return_pct": -5.480511,
+            "max_drawdown_pct": 9.947305,
+            "sharpe": -0.744716,
+            "trades": 34,
+            "win_rate_pct": 11.764706,
+            "profit_factor": 0.574398,
+            "expectancy_per_trade": -0.161192,
+            "avg_holding_hours": 56.588235,
+            "total_fees": 2.1096,
+            "exposure_pct": 10.81,
+            "calmar": -0.27515
+          },
+          "score": -1.551,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LINK/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 20,
+            "ema_slow": 100,
+            "rsi_reclaim": 40.0,
+            "stop_atr": 2.2,
+            "trail_atr": 2.8
+          },
+          "train": {
+            "net_return_pct": -4.672624,
+            "max_drawdown_pct": 7.751142,
+            "sharpe": -0.465179,
+            "trades": 36,
+            "win_rate_pct": 19.444444,
+            "profit_factor": 0.655198,
+            "expectancy_per_trade": -0.129795,
+            "avg_holding_hours": 45.444444,
+            "total_fees": 2.6749,
+            "exposure_pct": 5.27,
+            "calmar": -0.173068
+          },
+          "test": {
+            "net_return_pct": 2.992378,
+            "max_drawdown_pct": 4.29903,
+            "sharpe": 0.609436,
+            "trades": 14,
+            "win_rate_pct": 21.428571,
+            "profit_factor": 1.766436,
+            "expectancy_per_trade": 0.213741,
+            "avg_holding_hours": 59.142857,
+            "total_fees": 0.9153,
+            "exposure_pct": 4.65,
+            "calmar": 0.340148
+          },
+          "score": 0.696,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LINK/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 30.0,
+            "adx_max": 22.0,
+            "stop_atr": 2.4
+          },
+          "train": {
+            "net_return_pct": -3.952941,
+            "max_drawdown_pct": 4.701837,
+            "sharpe": -1.089811,
+            "trades": 8,
+            "win_rate_pct": 25.0,
+            "profit_factor": 0.070493,
+            "expectancy_per_trade": -0.494118,
+            "avg_holding_hours": 43.0,
+            "total_fees": 0.5044,
+            "exposure_pct": 1.11,
+            "calmar": -0.24072
+          },
+          "test": {
+            "net_return_pct": 0.428402,
+            "max_drawdown_pct": 1.917286,
+            "sharpe": 0.179205,
+            "trades": 4,
+            "win_rate_pct": 50.0,
+            "profit_factor": 1.250285,
+            "expectancy_per_trade": 0.1071,
+            "avg_holding_hours": 16.0,
+            "total_fees": 0.2411,
+            "exposure_pct": 0.36,
+            "calmar": 0.109895
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LINK/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.4,
+            "rsi_entry": 28.0,
+            "adx_max": 20.0,
+            "stop_atr": 2.6
+          },
+          "train": {
+            "net_return_pct": -1.554258,
+            "max_drawdown_pct": 2.263009,
+            "sharpe": -0.707814,
+            "trades": 3,
+            "win_rate_pct": 33.333333,
+            "profit_factor": 0.137328,
+            "expectancy_per_trade": -0.518086,
+            "avg_holding_hours": 41.333333,
+            "total_fees": 0.142,
+            "exposure_pct": 0.4,
+            "calmar": -0.194928
+          },
+          "test": {
+            "net_return_pct": 1.136519,
+            "max_drawdown_pct": 0.300956,
+            "sharpe": 0.840918,
+            "trades": 1,
+            "win_rate_pct": 100.0,
+            "profit_factor": Infinity,
+            "expectancy_per_trade": 1.136519,
+            "avg_holding_hours": 24.0,
+            "total_fees": 0.0617,
+            "exposure_pct": 0.13,
+            "calmar": 1.854002
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LINK/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 32.0,
+            "adx_max": 24.0,
+            "stop_atr": 2.2
+          },
+          "train": {
+            "net_return_pct": -3.430493,
+            "max_drawdown_pct": 3.498976,
+            "sharpe": -0.633701,
+            "trades": 16,
+            "win_rate_pct": 43.75,
+            "profit_factor": 0.501346,
+            "expectancy_per_trade": -0.214406,
+            "avg_holding_hours": 42.0,
+            "total_fees": 1.0278,
+            "exposure_pct": 2.15,
+            "calmar": -0.280179
+          },
+          "test": {
+            "net_return_pct": -2.50885,
+            "max_drawdown_pct": 3.942085,
+            "sharpe": -0.619849,
+            "trades": 13,
+            "win_rate_pct": 46.153846,
+            "profit_factor": 0.582411,
+            "expectancy_per_trade": -0.192988,
+            "avg_holding_hours": 31.076923,
+            "total_fees": 0.9027,
+            "exposure_pct": 2.27,
+            "calmar": -0.315373
+          },
+          "score": -1.636,
+          "status": "rejected"
+        }
+      ]
+    },
+    {
+      "symbol": "UNI/USD",
+      "selected": {
+        "symbol": "UNI/USD",
+        "strategy": "trend_breakout",
+        "params": {
+          "donchian": 35,
+          "trend_ema": 100,
+          "stop_atr": 2.8,
+          "trail_atr": 3.4,
+          "min_atr_pct": 1.0
+        },
+        "train": {
+          "net_return_pct": -4.563246,
+          "max_drawdown_pct": 4.563246,
+          "sharpe": -0.872462,
+          "trades": 12,
+          "win_rate_pct": 16.666667,
+          "profit_factor": 0.283945,
+          "expectancy_per_trade": -0.38027,
+          "avg_holding_hours": 87.0,
+          "total_fees": 0.6828,
+          "exposure_pct": 7.47,
+          "calmar": -0.631954
+        },
+        "test": {
+          "net_return_pct": 6.398936,
+          "max_drawdown_pct": 1.920706,
+          "sharpe": 1.737978,
+          "trades": 5,
+          "win_rate_pct": 80.0,
+          "profit_factor": 21.363584,
+          "expectancy_per_trade": 1.279787,
+          "avg_holding_hours": 159.2,
+          "total_fees": 0.2668,
+          "exposure_pct": 9.25,
+          "calmar": 3.394656
+        },
+        "score": 1.92,
+        "status": "selected"
+      },
+      "candidates": [
+        {
+          "symbol": "UNI/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 20,
+            "trend_ema": 100,
+            "stop_atr": 2.5,
+            "trail_atr": 3.0,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": -0.419712,
+            "max_drawdown_pct": 5.112633,
+            "sharpe": -0.023837,
+            "trades": 16,
+            "win_rate_pct": 31.25,
+            "profit_factor": 0.940252,
+            "expectancy_per_trade": -0.026232,
+            "avg_holding_hours": 87.5,
+            "total_fees": 1.064,
+            "exposure_pct": 10.01,
+            "calmar": -0.051472
+          },
+          "test": {
+            "net_return_pct": 5.423016,
+            "max_drawdown_pct": 2.895979,
+            "sharpe": 1.287238,
+            "trades": 8,
+            "win_rate_pct": 50.0,
+            "profit_factor": 3.039178,
+            "expectancy_per_trade": 0.677877,
+            "avg_holding_hours": 107.5,
+            "total_fees": 0.4774,
+            "exposure_pct": 9.99,
+            "calmar": 1.907907
+          },
+          "score": 1.124,
+          "status": "rejected"
+        },
+        {
+          "symbol": "UNI/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 35,
+            "trend_ema": 100,
+            "stop_atr": 2.8,
+            "trail_atr": 3.4,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": -4.563246,
+            "max_drawdown_pct": 4.563246,
+            "sharpe": -0.872462,
+            "trades": 12,
+            "win_rate_pct": 16.666667,
+            "profit_factor": 0.283945,
+            "expectancy_per_trade": -0.38027,
+            "avg_holding_hours": 87.0,
+            "total_fees": 0.6828,
+            "exposure_pct": 7.47,
+            "calmar": -0.631954
+          },
+          "test": {
+            "net_return_pct": 6.398936,
+            "max_drawdown_pct": 1.920706,
+            "sharpe": 1.737978,
+            "trades": 5,
+            "win_rate_pct": 80.0,
+            "profit_factor": 21.363584,
+            "expectancy_per_trade": 1.279787,
+            "avg_holding_hours": 159.2,
+            "total_fees": 0.2668,
+            "exposure_pct": 9.25,
+            "calmar": 3.394656
+          },
+          "score": 1.92,
+          "status": "selected"
+        },
+        {
+          "symbol": "UNI/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 55,
+            "trend_ema": 100,
+            "stop_atr": 3.0,
+            "trail_atr": 4.0,
+            "min_atr_pct": 0.8
+          },
+          "train": {
+            "net_return_pct": -2.755764,
+            "max_drawdown_pct": 4.10662,
+            "sharpe": -0.494819,
+            "trades": 10,
+            "win_rate_pct": 20.0,
+            "profit_factor": 0.436373,
+            "expectancy_per_trade": -0.275576,
+            "avg_holding_hours": 124.0,
+            "total_fees": 0.5441,
+            "exposure_pct": 8.87,
+            "calmar": -0.422607
+          },
+          "test": {
+            "net_return_pct": 3.870122,
+            "max_drawdown_pct": 1.911695,
+            "sharpe": 1.178131,
+            "trades": 5,
+            "win_rate_pct": 60.0,
+            "profit_factor": 7.547711,
+            "expectancy_per_trade": 0.774024,
+            "avg_holding_hours": 157.6,
+            "total_fees": 0.232,
+            "exposure_pct": 9.15,
+            "calmar": 2.062327
+          },
+          "score": 1.161,
+          "status": "rejected"
+        },
+        {
+          "symbol": "UNI/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 35.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": 0.317911,
+            "max_drawdown_pct": 3.514322,
+            "sharpe": 0.077281,
+            "trades": 9,
+            "win_rate_pct": 33.333333,
+            "profit_factor": 1.110565,
+            "expectancy_per_trade": 0.035323,
+            "avg_holding_hours": 60.444444,
+            "total_fees": 0.4316,
+            "exposure_pct": 3.89,
+            "calmar": 0.056641
+          },
+          "test": {
+            "net_return_pct": 1.917223,
+            "max_drawdown_pct": 0.858835,
+            "sharpe": 0.754487,
+            "trades": 3,
+            "win_rate_pct": 33.333333,
+            "profit_factor": 3.745891,
+            "expectancy_per_trade": 0.639074,
+            "avg_holding_hours": 126.666667,
+            "total_fees": 0.1553,
+            "exposure_pct": 4.41,
+            "calmar": 2.273726
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "UNI/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 42.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -6.791093,
+            "max_drawdown_pct": 8.25743,
+            "sharpe": -1.063192,
+            "trades": 26,
+            "win_rate_pct": 15.384615,
+            "profit_factor": 0.357768,
+            "expectancy_per_trade": -0.261196,
+            "avg_holding_hours": 58.923077,
+            "total_fees": 1.2901,
+            "exposure_pct": 10.93,
+            "calmar": -0.521994
+          },
+          "test": {
+            "net_return_pct": 0.378538,
+            "max_drawdown_pct": 1.646893,
+            "sharpe": 0.164746,
+            "trades": 5,
+            "win_rate_pct": 20.0,
+            "profit_factor": 1.201054,
+            "expectancy_per_trade": 0.075708,
+            "avg_holding_hours": 77.6,
+            "total_fees": 0.2512,
+            "exposure_pct": 4.51,
+            "calmar": 0.234077
+          },
+          "score": 0.114,
+          "status": "rejected"
+        },
+        {
+          "symbol": "UNI/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 20,
+            "ema_slow": 100,
+            "rsi_reclaim": 40.0,
+            "stop_atr": 2.2,
+            "trail_atr": 2.8
+          },
+          "train": {
+            "net_return_pct": -5.829297,
+            "max_drawdown_pct": 7.587331,
+            "sharpe": -1.598211,
+            "trades": 21,
+            "win_rate_pct": 9.52381,
+            "profit_factor": 0.24983,
+            "expectancy_per_trade": -0.277586,
+            "avg_holding_hours": 16.380952,
+            "total_fees": 1.0585,
+            "exposure_pct": 2.43,
+            "calmar": -0.486721
+          },
+          "test": {
+            "net_return_pct": -1.129129,
+            "max_drawdown_pct": 1.562221,
+            "sharpe": -0.655943,
+            "trades": 4,
+            "win_rate_pct": 0.0,
+            "profit_factor": 0.0,
+            "expectancy_per_trade": -0.282282,
+            "avg_holding_hours": 88.0,
+            "total_fees": 0.2215,
+            "exposure_pct": 4.09,
+            "calmar": -0.735962
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "UNI/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 30.0,
+            "adx_max": 22.0,
+            "stop_atr": 2.4
+          },
+          "train": {
+            "net_return_pct": -3.144446,
+            "max_drawdown_pct": 3.144446,
+            "sharpe": -1.243636,
+            "trades": 9,
+            "win_rate_pct": 44.444444,
+            "profit_factor": 0.23579,
+            "expectancy_per_trade": -0.349383,
+            "avg_holding_hours": 35.111111,
+            "total_fees": 0.4933,
+            "exposure_pct": 2.26,
+            "calmar": -0.630234
+          },
+          "test": {
+            "net_return_pct": -1.111587,
+            "max_drawdown_pct": 1.130416,
+            "sharpe": -1.306359,
+            "trades": 1,
+            "win_rate_pct": 0.0,
+            "profit_factor": 0.0,
+            "expectancy_per_trade": -1.111587,
+            "avg_holding_hours": 32.0,
+            "total_fees": 0.0789,
+            "exposure_pct": 0.37,
+            "calmar": -1.00129
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "UNI/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.4,
+            "rsi_entry": 28.0,
+            "adx_max": 20.0,
+            "stop_atr": 2.6
+          },
+          "train": {
+            "net_return_pct": -1.454882,
+            "max_drawdown_pct": 1.640801,
+            "sharpe": -0.786423,
+            "trades": 4,
+            "win_rate_pct": 50.0,
+            "profit_factor": 0.175315,
+            "expectancy_per_trade": -0.36372,
+            "avg_holding_hours": 26.0,
+            "total_fees": 0.2196,
+            "exposure_pct": 0.74,
+            "calmar": -0.557031
+          },
+          "test": {
+            "net_return_pct": -1.102646,
+            "max_drawdown_pct": 1.120028,
+            "sharpe": -1.351608,
+            "trades": 1,
+            "win_rate_pct": 0.0,
+            "profit_factor": 0.0,
+            "expectancy_per_trade": -1.102646,
+            "avg_holding_hours": 32.0,
+            "total_fees": 0.0727,
+            "exposure_pct": 0.37,
+            "calmar": -1.002449
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "UNI/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 32.0,
+            "adx_max": 24.0,
+            "stop_atr": 2.2
+          },
+          "train": {
+            "net_return_pct": -4.664952,
+            "max_drawdown_pct": 5.366776,
+            "sharpe": -1.249681,
+            "trades": 15,
+            "win_rate_pct": 40.0,
+            "profit_factor": 0.374356,
+            "expectancy_per_trade": -0.310997,
+            "avg_holding_hours": 26.666667,
+            "total_fees": 0.8837,
+            "exposure_pct": 2.86,
+            "calmar": -0.54942
+          },
+          "test": {
+            "net_return_pct": -1.122147,
+            "max_drawdown_pct": 1.142686,
+            "sharpe": -1.246783,
+            "trades": 1,
+            "win_rate_pct": 0.0,
+            "profit_factor": 0.0,
+            "expectancy_per_trade": -1.122147,
+            "avg_holding_hours": 24.0,
+            "total_fees": 0.0863,
+            "exposure_pct": 0.28,
+            "calmar": -0.999948
+          },
+          "score": -999.0,
+          "status": "rejected"
+        }
+      ]
+    },
+    {
+      "symbol": "AAVE/USD",
+      "selected": {
+        "symbol": "AAVE/USD",
+        "strategy": "trend_breakout",
+        "params": {
+          "donchian": 55,
+          "trend_ema": 100,
+          "stop_atr": 3.0,
+          "trail_atr": 4.0,
+          "min_atr_pct": 0.8
+        },
+        "train": {
+          "net_return_pct": -9.516574,
+          "max_drawdown_pct": 12.092474,
+          "sharpe": -1.061386,
+          "trades": 23,
+          "win_rate_pct": 8.695652,
+          "profit_factor": 0.303803,
+          "expectancy_per_trade": -0.413764,
+          "avg_holding_hours": 90.782609,
+          "total_fees": 1.071,
+          "exposure_pct": 7.51,
+          "calmar": -0.253718
+        },
+        "test": {
+          "net_return_pct": 2.474371,
+          "max_drawdown_pct": 5.53382,
+          "sharpe": 0.33378,
+          "trades": 13,
+          "win_rate_pct": 30.769231,
+          "profit_factor": 1.535869,
+          "expectancy_per_trade": 0.190336,
+          "avg_holding_hours": 168.307692,
+          "total_fees": 0.7127,
+          "exposure_pct": 13.65,
+          "calmar": 0.242887
+        },
+        "score": 0.447,
+        "status": "selected"
+      },
+      "candidates": [
+        {
+          "symbol": "AAVE/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 20,
+            "trend_ema": 100,
+            "stop_atr": 2.5,
+            "trail_atr": 3.0,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": -12.548027,
+            "max_drawdown_pct": 12.623728,
+            "sharpe": -1.297012,
+            "trades": 33,
+            "win_rate_pct": 18.181818,
+            "profit_factor": 0.276258,
+            "expectancy_per_trade": -0.380243,
+            "avg_holding_hours": 69.818182,
+            "total_fees": 1.9232,
+            "exposure_pct": 8.27,
+            "calmar": -0.324144
+          },
+          "test": {
+            "net_return_pct": -7.209161,
+            "max_drawdown_pct": 8.623293,
+            "sharpe": -0.927991,
+            "trades": 26,
+            "win_rate_pct": 23.076923,
+            "profit_factor": 0.471837,
+            "expectancy_per_trade": -0.277275,
+            "avg_holding_hours": 70.0,
+            "total_fees": 1.6224,
+            "exposure_pct": 11.35,
+            "calmar": -0.464401
+          },
+          "score": -1.836,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AAVE/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 35,
+            "trend_ema": 100,
+            "stop_atr": 2.8,
+            "trail_atr": 3.4,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": -11.670812,
+            "max_drawdown_pct": 12.018759,
+            "sharpe": -1.105851,
+            "trades": 37,
+            "win_rate_pct": 21.621622,
+            "profit_factor": 0.36742,
+            "expectancy_per_trade": -0.315427,
+            "avg_holding_hours": 88.432432,
+            "total_fees": 1.7909,
+            "exposure_pct": 11.76,
+            "calmar": -0.315603
+          },
+          "test": {
+            "net_return_pct": -3.939972,
+            "max_drawdown_pct": 7.723232,
+            "sharpe": -0.616059,
+            "trades": 18,
+            "win_rate_pct": 27.777778,
+            "profit_factor": 0.515005,
+            "expectancy_per_trade": -0.218887,
+            "avg_holding_hours": 81.555556,
+            "total_fees": 0.9998,
+            "exposure_pct": 9.16,
+            "calmar": -0.2812
+          },
+          "score": -1.51,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AAVE/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 55,
+            "trend_ema": 100,
+            "stop_atr": 3.0,
+            "trail_atr": 4.0,
+            "min_atr_pct": 0.8
+          },
+          "train": {
+            "net_return_pct": -9.516574,
+            "max_drawdown_pct": 12.092474,
+            "sharpe": -1.061386,
+            "trades": 23,
+            "win_rate_pct": 8.695652,
+            "profit_factor": 0.303803,
+            "expectancy_per_trade": -0.413764,
+            "avg_holding_hours": 90.782609,
+            "total_fees": 1.071,
+            "exposure_pct": 7.51,
+            "calmar": -0.253718
+          },
+          "test": {
+            "net_return_pct": 2.474371,
+            "max_drawdown_pct": 5.53382,
+            "sharpe": 0.33378,
+            "trades": 13,
+            "win_rate_pct": 30.769231,
+            "profit_factor": 1.535869,
+            "expectancy_per_trade": 0.190336,
+            "avg_holding_hours": 168.307692,
+            "total_fees": 0.7127,
+            "exposure_pct": 13.65,
+            "calmar": 0.242887
+          },
+          "score": 0.447,
+          "status": "selected"
+        },
+        {
+          "symbol": "AAVE/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 35.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -3.050311,
+            "max_drawdown_pct": 3.867718,
+            "sharpe": -0.634106,
+            "trades": 18,
+            "win_rate_pct": 22.222222,
+            "profit_factor": 0.344155,
+            "expectancy_per_trade": -0.170385,
+            "avg_holding_hours": 43.333333,
+            "total_fees": 0.808,
+            "exposure_pct": 2.81,
+            "calmar": -0.248373
+          },
+          "test": {
+            "net_return_pct": -2.654974,
+            "max_drawdown_pct": 4.141466,
+            "sharpe": -0.646105,
+            "trades": 12,
+            "win_rate_pct": 16.666667,
+            "profit_factor": 0.344718,
+            "expectancy_per_trade": -0.221248,
+            "avg_holding_hours": 64.333333,
+            "total_fees": 0.7732,
+            "exposure_pct": 4.82,
+            "calmar": -0.352313
+          },
+          "score": -1.641,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AAVE/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 42.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -6.394694,
+            "max_drawdown_pct": 7.113119,
+            "sharpe": -0.601826,
+            "trades": 48,
+            "win_rate_pct": 20.833333,
+            "profit_factor": 0.639531,
+            "expectancy_per_trade": -0.133543,
+            "avg_holding_hours": 64.583333,
+            "total_fees": 2.7498,
+            "exposure_pct": 11.12,
+            "calmar": -0.286528
+          },
+          "test": {
+            "net_return_pct": -4.780616,
+            "max_drawdown_pct": 7.072515,
+            "sharpe": -0.657296,
+            "trades": 28,
+            "win_rate_pct": 21.428571,
+            "profit_factor": 0.549187,
+            "expectancy_per_trade": -0.170736,
+            "avg_holding_hours": 71.285714,
+            "total_fees": 1.6969,
+            "exposure_pct": 12.45,
+            "calmar": -0.373325
+          },
+          "score": -1.676,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AAVE/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 20,
+            "ema_slow": 100,
+            "rsi_reclaim": 40.0,
+            "stop_atr": 2.2,
+            "trail_atr": 2.8
+          },
+          "train": {
+            "net_return_pct": -6.658412,
+            "max_drawdown_pct": 7.131155,
+            "sharpe": -0.89304,
+            "trades": 25,
+            "win_rate_pct": 16.0,
+            "profit_factor": 0.310263,
+            "expectancy_per_trade": -0.266336,
+            "avg_holding_hours": 38.72,
+            "total_fees": 1.7689,
+            "exposure_pct": 3.44,
+            "calmar": -0.297875
+          },
+          "test": {
+            "net_return_pct": -5.2475,
+            "max_drawdown_pct": 5.516029,
+            "sharpe": -1.364658,
+            "trades": 14,
+            "win_rate_pct": 14.285714,
+            "profit_factor": 0.12339,
+            "expectancy_per_trade": -0.374821,
+            "avg_holding_hours": 50.571429,
+            "total_fees": 0.9177,
+            "exposure_pct": 4.42,
+            "calmar": -0.525994
+          },
+          "score": -1.951,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AAVE/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 30.0,
+            "adx_max": 22.0,
+            "stop_atr": 2.4
+          },
+          "train": {
+            "net_return_pct": -2.075143,
+            "max_drawdown_pct": 2.093991,
+            "sharpe": -0.714793,
+            "trades": 8,
+            "win_rate_pct": 62.5,
+            "profit_factor": 0.357006,
+            "expectancy_per_trade": -0.259393,
+            "avg_holding_hours": 53.5,
+            "total_fees": 0.4867,
+            "exposure_pct": 1.54,
+            "calmar": -0.311029
+          },
+          "test": {
+            "net_return_pct": -2.566905,
+            "max_drawdown_pct": 2.566905,
+            "sharpe": -1.204785,
+            "trades": 5,
+            "win_rate_pct": 20.0,
+            "profit_factor": 0.01501,
+            "expectancy_per_trade": -0.513381,
+            "avg_holding_hours": 48.8,
+            "total_fees": 0.2705,
+            "exposure_pct": 1.52,
+            "calmar": -0.549458
+          },
+          "score": -1.2,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AAVE/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.4,
+            "rsi_entry": 28.0,
+            "adx_max": 20.0,
+            "stop_atr": 2.6
+          },
+          "train": {
+            "net_return_pct": 0.781047,
+            "max_drawdown_pct": 0.344536,
+            "sharpe": 0.58471,
+            "trades": 3,
+            "win_rate_pct": 100.0,
+            "profit_factor": Infinity,
+            "expectancy_per_trade": 0.260349,
+            "avg_holding_hours": 46.666667,
+            "total_fees": 0.1126,
+            "exposure_pct": 0.5,
+            "calmar": 0.704497
+          },
+          "test": {
+            "net_return_pct": -1.814948,
+            "max_drawdown_pct": 1.814948,
+            "sharpe": -0.981622,
+            "trades": 2,
+            "win_rate_pct": 0.0,
+            "profit_factor": 0.0,
+            "expectancy_per_trade": -0.907474,
+            "avg_holding_hours": 32.0,
+            "total_fees": 0.1366,
+            "exposure_pct": 0.4,
+            "calmar": -0.548506
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "AAVE/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 32.0,
+            "adx_max": 24.0,
+            "stop_atr": 2.2
+          },
+          "train": {
+            "net_return_pct": -3.076453,
+            "max_drawdown_pct": 4.411771,
+            "sharpe": -0.604585,
+            "trades": 18,
+            "win_rate_pct": 50.0,
+            "profit_factor": 0.541063,
+            "expectancy_per_trade": -0.170914,
+            "avg_holding_hours": 53.333333,
+            "total_fees": 1.2568,
+            "exposure_pct": 3.44,
+            "calmar": -0.219631
+          },
+          "test": {
+            "net_return_pct": -1.503886,
+            "max_drawdown_pct": 1.987943,
+            "sharpe": -0.548567,
+            "trades": 6,
+            "win_rate_pct": 33.333333,
+            "profit_factor": 0.444756,
+            "expectancy_per_trade": -0.250648,
+            "avg_holding_hours": 44.666667,
+            "total_fees": 0.3716,
+            "exposure_pct": 1.67,
+            "calmar": -0.41465
+          },
+          "score": -1.051,
+          "status": "rejected"
+        }
+      ]
+    },
+    {
+      "symbol": "XRP/USD",
+      "selected": {
+        "symbol": "XRP/USD",
+        "strategy": "trend_pullback",
+        "params": {
+          "ema_fast": 50,
+          "ema_slow": 200,
+          "rsi_reclaim": 42.0,
+          "stop_atr": 2.5,
+          "trail_atr": 3.2
+        },
+        "train": {
+          "net_return_pct": -8.043823,
+          "max_drawdown_pct": 8.132055,
+          "sharpe": -1.680589,
+          "trades": 28,
+          "win_rate_pct": 10.714286,
+          "profit_factor": 0.349544,
+          "expectancy_per_trade": -0.287279,
+          "avg_holding_hours": 56.571429,
+          "total_fees": 2.3211,
+          "exposure_pct": 11.36,
+          "calmar": -0.629022
+        },
+        "test": {
+          "net_return_pct": 1.698238,
+          "max_drawdown_pct": 2.249174,
+          "sharpe": 0.54122,
+          "trades": 10,
+          "win_rate_pct": 30.0,
+          "profit_factor": 1.597717,
+          "expectancy_per_trade": 0.169824,
+          "avg_holding_hours": 69.6,
+          "total_fees": 0.8291,
+          "exposure_pct": 8.1,
+          "calmar": 0.770472
+        },
+        "score": 0.755,
+        "status": "selected"
+      },
+      "candidates": [
+        {
+          "symbol": "XRP/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 20,
+            "trend_ema": 100,
+            "stop_atr": 2.5,
+            "trail_atr": 3.0,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": 23.264761,
+            "max_drawdown_pct": 7.102532,
+            "sharpe": 1.114472,
+            "trades": 35,
+            "win_rate_pct": 28.571429,
+            "profit_factor": 2.245013,
+            "expectancy_per_trade": 0.664707,
+            "avg_holding_hours": 83.885714,
+            "total_fees": 3.7095,
+            "exposure_pct": 20.8,
+            "calmar": 1.970141
+          },
+          "test": {
+            "net_return_pct": -1.484654,
+            "max_drawdown_pct": 6.617149,
+            "sharpe": -0.289545,
+            "trades": 12,
+            "win_rate_pct": 16.666667,
+            "profit_factor": 0.793981,
+            "expectancy_per_trade": -0.129886,
+            "avg_holding_hours": 39.333333,
+            "total_fees": 1.1085,
+            "exposure_pct": 5.54,
+            "calmar": -0.228874
+          },
+          "score": -1.224,
+          "status": "rejected"
+        },
+        {
+          "symbol": "XRP/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 35,
+            "trend_ema": 100,
+            "stop_atr": 2.8,
+            "trail_atr": 3.4,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": 36.601368,
+            "max_drawdown_pct": 12.648377,
+            "sharpe": 1.360107,
+            "trades": 26,
+            "win_rate_pct": 23.076923,
+            "profit_factor": 3.47979,
+            "expectancy_per_trade": 1.407745,
+            "avg_holding_hours": 101.384615,
+            "total_fees": 2.4248,
+            "exposure_pct": 18.65,
+            "calmar": 1.705087
+          },
+          "test": {
+            "net_return_pct": -1.629235,
+            "max_drawdown_pct": 5.667704,
+            "sharpe": -0.318349,
+            "trades": 10,
+            "win_rate_pct": 10.0,
+            "profit_factor": 0.716123,
+            "expectancy_per_trade": -0.169514,
+            "avg_holding_hours": 44.4,
+            "total_fees": 0.8252,
+            "exposure_pct": 5.21,
+            "calmar": -0.293232
+          },
+          "score": -1.287,
+          "status": "rejected"
+        },
+        {
+          "symbol": "XRP/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 55,
+            "trend_ema": 100,
+            "stop_atr": 3.0,
+            "trail_atr": 4.0,
+            "min_atr_pct": 0.8
+          },
+          "train": {
+            "net_return_pct": 58.089829,
+            "max_drawdown_pct": 13.757688,
+            "sharpe": 1.411372,
+            "trades": 12,
+            "win_rate_pct": 8.333333,
+            "profit_factor": 9.611387,
+            "expectancy_per_trade": 4.840819,
+            "avg_holding_hours": 104.0,
+            "total_fees": 1.0808,
+            "exposure_pct": 8.95,
+            "calmar": 2.414044
+          },
+          "test": {
+            "net_return_pct": -0.281395,
+            "max_drawdown_pct": 4.269472,
+            "sharpe": -0.043199,
+            "trades": 7,
+            "win_rate_pct": 14.285714,
+            "profit_factor": 0.936631,
+            "expectancy_per_trade": -0.040199,
+            "avg_holding_hours": 48.571429,
+            "total_fees": 0.5036,
+            "exposure_pct": 3.96,
+            "calmar": -0.067242
+          },
+          "score": -0.64,
+          "status": "rejected"
+        },
+        {
+          "symbol": "XRP/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 35.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -3.185872,
+            "max_drawdown_pct": 3.732949,
+            "sharpe": -1.018849,
+            "trades": 9,
+            "win_rate_pct": 11.111111,
+            "profit_factor": 0.31646,
+            "expectancy_per_trade": -0.353986,
+            "avg_holding_hours": 85.777778,
+            "total_fees": 0.5324,
+            "exposure_pct": 5.54,
+            "calmar": -0.537609
+          },
+          "test": {
+            "net_return_pct": 3.55064,
+            "max_drawdown_pct": 0.569267,
+            "sharpe": 1.409472,
+            "trades": 2,
+            "win_rate_pct": 100.0,
+            "profit_factor": Infinity,
+            "expectancy_per_trade": 1.77532,
+            "avg_holding_hours": 54.0,
+            "total_fees": 0.2234,
+            "exposure_pct": 1.26,
+            "calmar": 6.365783
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "XRP/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 42.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -8.043823,
+            "max_drawdown_pct": 8.132055,
+            "sharpe": -1.680589,
+            "trades": 28,
+            "win_rate_pct": 10.714286,
+            "profit_factor": 0.349544,
+            "expectancy_per_trade": -0.287279,
+            "avg_holding_hours": 56.571429,
+            "total_fees": 2.3211,
+            "exposure_pct": 11.36,
+            "calmar": -0.629022
+          },
+          "test": {
+            "net_return_pct": 1.698238,
+            "max_drawdown_pct": 2.249174,
+            "sharpe": 0.54122,
+            "trades": 10,
+            "win_rate_pct": 30.0,
+            "profit_factor": 1.597717,
+            "expectancy_per_trade": 0.169824,
+            "avg_holding_hours": 69.6,
+            "total_fees": 0.8291,
+            "exposure_pct": 8.1,
+            "calmar": 0.770472
+          },
+          "score": 0.755,
+          "status": "selected"
+        },
+        {
+          "symbol": "XRP/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 20,
+            "ema_slow": 100,
+            "rsi_reclaim": 40.0,
+            "stop_atr": 2.2,
+            "trail_atr": 2.8
+          },
+          "train": {
+            "net_return_pct": -3.904774,
+            "max_drawdown_pct": 4.560478,
+            "sharpe": -1.578728,
+            "trades": 16,
+            "win_rate_pct": 6.25,
+            "profit_factor": 0.191089,
+            "expectancy_per_trade": -0.244048,
+            "avg_holding_hours": 47.0,
+            "total_fees": 1.0646,
+            "exposure_pct": 5.39,
+            "calmar": -0.540101
+          },
+          "test": {
+            "net_return_pct": 0.045817,
+            "max_drawdown_pct": 1.116423,
+            "sharpe": 0.032426,
+            "trades": 4,
+            "win_rate_pct": 25.0,
+            "profit_factor": 1.02582,
+            "expectancy_per_trade": 0.011454,
+            "avg_holding_hours": 43.0,
+            "total_fees": 0.4179,
+            "exposure_pct": 2.0,
+            "calmar": 0.041871
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "XRP/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 30.0,
+            "adx_max": 22.0,
+            "stop_atr": 2.4
+          },
+          "train": {
+            "net_return_pct": -1.647306,
+            "max_drawdown_pct": 1.953488,
+            "sharpe": -0.869247,
+            "trades": 4,
+            "win_rate_pct": 50.0,
+            "profit_factor": 0.205179,
+            "expectancy_per_trade": -0.411827,
+            "avg_holding_hours": 45.0,
+            "total_fees": 0.3603,
+            "exposure_pct": 1.26,
+            "calmar": -0.529642
+          },
+          "test": {
+            "net_return_pct": -0.63315,
+            "max_drawdown_pct": 1.226169,
+            "sharpe": -0.510717,
+            "trades": 2,
+            "win_rate_pct": 50.0,
+            "profit_factor": 0.461174,
+            "expectancy_per_trade": -0.316575,
+            "avg_holding_hours": 28.0,
+            "total_fees": 0.2322,
+            "exposure_pct": 0.65,
+            "calmar": -0.526788
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "XRP/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.4,
+            "rsi_entry": 28.0,
+            "adx_max": 20.0,
+            "stop_atr": 2.6
+          },
+          "train": {
+            "net_return_pct": -1.597017,
+            "max_drawdown_pct": 1.879858,
+            "sharpe": -0.877003,
+            "trades": 4,
+            "win_rate_pct": 50.0,
+            "profit_factor": 0.197409,
+            "expectancy_per_trade": -0.399254,
+            "avg_holding_hours": 45.0,
+            "total_fees": 0.3326,
+            "exposure_pct": 1.26,
+            "calmar": -0.533534
+          },
+          "test": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "XRP/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 32.0,
+            "adx_max": 24.0,
+            "stop_atr": 2.2
+          },
+          "train": {
+            "net_return_pct": -1.889214,
+            "max_drawdown_pct": 2.785167,
+            "sharpe": -0.499817,
+            "trades": 11,
+            "win_rate_pct": 45.454545,
+            "profit_factor": 0.62045,
+            "expectancy_per_trade": -0.171747,
+            "avg_holding_hours": 29.818182,
+            "total_fees": 1.1032,
+            "exposure_pct": 2.32,
+            "calmar": -0.426234
+          },
+          "test": {
+            "net_return_pct": -0.067377,
+            "max_drawdown_pct": 1.28,
+            "sharpe": -0.057474,
+            "trades": 3,
+            "win_rate_pct": 66.666667,
+            "profit_factor": 0.945292,
+            "expectancy_per_trade": -0.022459,
+            "avg_holding_hours": 25.333333,
+            "total_fees": 0.3686,
+            "exposure_pct": 0.88,
+            "calmar": -0.053704
+          },
+          "score": -999.0,
+          "status": "rejected"
+        }
+      ]
+    },
+    {
+      "symbol": "LTC/USD",
+      "selected": {
+        "symbol": "LTC/USD",
+        "strategy": "trend_breakout",
+        "params": {
+          "donchian": 55,
+          "trend_ema": 100,
+          "stop_atr": 3.0,
+          "trail_atr": 4.0,
+          "min_atr_pct": 0.8
+        },
+        "train": {
+          "net_return_pct": -5.480419,
+          "max_drawdown_pct": 11.347587,
+          "sharpe": -0.361239,
+          "trades": 31,
+          "win_rate_pct": 35.483871,
+          "profit_factor": 0.619828,
+          "expectancy_per_trade": -0.176788,
+          "avg_holding_hours": 127.225806,
+          "total_fees": 2.0999,
+          "exposure_pct": 12.7,
+          "calmar": -0.139055
+        },
+        "test": {
+          "net_return_pct": 4.111904,
+          "max_drawdown_pct": 6.050735,
+          "sharpe": 0.375899,
+          "trades": 21,
+          "win_rate_pct": 42.857143,
+          "profit_factor": 1.610018,
+          "expectancy_per_trade": 0.195805,
+          "avg_holding_hours": 139.238095,
+          "total_fees": 1.6666,
+          "exposure_pct": 16.43,
+          "calmar": 0.331173
+        },
+        "score": 0.68,
+        "status": "selected"
+      },
+      "candidates": [
+        {
+          "symbol": "LTC/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 20,
+            "trend_ema": 100,
+            "stop_atr": 2.5,
+            "trail_atr": 3.0,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": -4.594438,
+            "max_drawdown_pct": 12.02293,
+            "sharpe": -0.278989,
+            "trades": 33,
+            "win_rate_pct": 27.272727,
+            "profit_factor": 0.74641,
+            "expectancy_per_trade": -0.139225,
+            "avg_holding_hours": 87.515152,
+            "total_fees": 2.4709,
+            "exposure_pct": 9.3,
+            "calmar": -0.109663
+          },
+          "test": {
+            "net_return_pct": 1.756846,
+            "max_drawdown_pct": 9.485747,
+            "sharpe": 0.167969,
+            "trades": 31,
+            "win_rate_pct": 32.258065,
+            "profit_factor": 1.131558,
+            "expectancy_per_trade": 0.056672,
+            "avg_holding_hours": 85.419355,
+            "total_fees": 2.7295,
+            "exposure_pct": 14.88,
+            "calmar": 0.090787
+          },
+          "score": 0.185,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LTC/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 35,
+            "trend_ema": 100,
+            "stop_atr": 2.8,
+            "trail_atr": 3.4,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": -2.780077,
+            "max_drawdown_pct": 10.862289,
+            "sharpe": -0.158623,
+            "trades": 35,
+            "win_rate_pct": 34.285714,
+            "profit_factor": 0.804053,
+            "expectancy_per_trade": -0.079431,
+            "avg_holding_hours": 110.971429,
+            "total_fees": 2.6288,
+            "exposure_pct": 12.51,
+            "calmar": -0.072956
+          },
+          "test": {
+            "net_return_pct": -1.765273,
+            "max_drawdown_pct": 9.399089,
+            "sharpe": -0.133267,
+            "trades": 27,
+            "win_rate_pct": 37.037037,
+            "profit_factor": 0.847939,
+            "expectancy_per_trade": -0.06538,
+            "avg_holding_hours": 91.555556,
+            "total_fees": 2.0924,
+            "exposure_pct": 13.89,
+            "calmar": -0.09289
+          },
+          "score": -1.188,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LTC/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 55,
+            "trend_ema": 100,
+            "stop_atr": 3.0,
+            "trail_atr": 4.0,
+            "min_atr_pct": 0.8
+          },
+          "train": {
+            "net_return_pct": -5.480419,
+            "max_drawdown_pct": 11.347587,
+            "sharpe": -0.361239,
+            "trades": 31,
+            "win_rate_pct": 35.483871,
+            "profit_factor": 0.619828,
+            "expectancy_per_trade": -0.176788,
+            "avg_holding_hours": 127.225806,
+            "total_fees": 2.0999,
+            "exposure_pct": 12.7,
+            "calmar": -0.139055
+          },
+          "test": {
+            "net_return_pct": 4.111904,
+            "max_drawdown_pct": 6.050735,
+            "sharpe": 0.375899,
+            "trades": 21,
+            "win_rate_pct": 42.857143,
+            "profit_factor": 1.610018,
+            "expectancy_per_trade": 0.195805,
+            "avg_holding_hours": 139.238095,
+            "total_fees": 1.6666,
+            "exposure_pct": 16.43,
+            "calmar": 0.331173
+          },
+          "score": 0.68,
+          "status": "selected"
+        },
+        {
+          "symbol": "LTC/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 35.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -6.917749,
+            "max_drawdown_pct": 7.024288,
+            "sharpe": -1.412199,
+            "trades": 13,
+            "win_rate_pct": 0.0,
+            "profit_factor": 0.0,
+            "expectancy_per_trade": -0.532135,
+            "avg_holding_hours": 53.538462,
+            "total_fees": 0.8135,
+            "exposure_pct": 2.24,
+            "calmar": -0.285098
+          },
+          "test": {
+            "net_return_pct": -0.052893,
+            "max_drawdown_pct": 3.057656,
+            "sharpe": -0.005391,
+            "trades": 9,
+            "win_rate_pct": 22.222222,
+            "profit_factor": 0.981573,
+            "expectancy_per_trade": -0.005877,
+            "avg_holding_hours": 55.111111,
+            "total_fees": 0.8217,
+            "exposure_pct": 2.79,
+            "calmar": -0.008518
+          },
+          "score": -0.61,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LTC/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 42.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -5.139994,
+            "max_drawdown_pct": 10.812041,
+            "sharpe": -0.417511,
+            "trades": 48,
+            "win_rate_pct": 20.833333,
+            "profit_factor": 0.754779,
+            "expectancy_per_trade": -0.107083,
+            "avg_holding_hours": 68.75,
+            "total_fees": 3.3683,
+            "exposure_pct": 10.6,
+            "calmar": -0.136703
+          },
+          "test": {
+            "net_return_pct": 1.1893,
+            "max_drawdown_pct": 4.492531,
+            "sharpe": 0.179978,
+            "trades": 32,
+            "win_rate_pct": 25.0,
+            "profit_factor": 1.1113,
+            "expectancy_per_trade": 0.037166,
+            "avg_holding_hours": 72.75,
+            "total_fees": 2.7031,
+            "exposure_pct": 13.08,
+            "calmar": 0.129951
+          },
+          "score": 0.265,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LTC/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 20,
+            "ema_slow": 100,
+            "rsi_reclaim": 40.0,
+            "stop_atr": 2.2,
+            "trail_atr": 2.8
+          },
+          "train": {
+            "net_return_pct": 2.678207,
+            "max_drawdown_pct": 2.193099,
+            "sharpe": 0.301777,
+            "trades": 30,
+            "win_rate_pct": 30.0,
+            "profit_factor": 1.264002,
+            "expectancy_per_trade": 0.089274,
+            "avg_holding_hours": 52.533333,
+            "total_fees": 2.339,
+            "exposure_pct": 5.05,
+            "calmar": 0.341349
+          },
+          "test": {
+            "net_return_pct": -1.911847,
+            "max_drawdown_pct": 3.961007,
+            "sharpe": -0.427898,
+            "trades": 13,
+            "win_rate_pct": 30.769231,
+            "profit_factor": 0.537225,
+            "expectancy_per_trade": -0.147065,
+            "avg_holding_hours": 63.076923,
+            "total_fees": 1.1602,
+            "exposure_pct": 4.61,
+            "calmar": -0.238811
+          },
+          "score": -1.483,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LTC/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 30.0,
+            "adx_max": 22.0,
+            "stop_atr": 2.4
+          },
+          "train": {
+            "net_return_pct": -1.444116,
+            "max_drawdown_pct": 1.491075,
+            "sharpe": -0.572889,
+            "trades": 6,
+            "win_rate_pct": 33.333333,
+            "profit_factor": 0.176287,
+            "expectancy_per_trade": -0.240686,
+            "avg_holding_hours": 49.333333,
+            "total_fees": 0.402,
+            "exposure_pct": 0.94,
+            "calmar": -0.274733
+          },
+          "test": {
+            "net_return_pct": 1.199898,
+            "max_drawdown_pct": 1.644862,
+            "sharpe": 0.472491,
+            "trades": 8,
+            "win_rate_pct": 50.0,
+            "profit_factor": 1.790456,
+            "expectancy_per_trade": 0.149987,
+            "avg_holding_hours": 44.5,
+            "total_fees": 0.4821,
+            "exposure_pct": 2.0,
+            "calmar": 0.358081
+          },
+          "score": 0.36,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LTC/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.4,
+            "rsi_entry": 28.0,
+            "adx_max": 20.0,
+            "stop_atr": 2.6
+          },
+          "train": {
+            "net_return_pct": -0.454668,
+            "max_drawdown_pct": 0.834963,
+            "sharpe": -0.325886,
+            "trades": 2,
+            "win_rate_pct": 50.0,
+            "profit_factor": 0.283771,
+            "expectancy_per_trade": -0.227334,
+            "avg_holding_hours": 28.0,
+            "total_fees": 0.0715,
+            "exposure_pct": 0.17,
+            "calmar": -0.153915
+          },
+          "test": {
+            "net_return_pct": 1.025487,
+            "max_drawdown_pct": 0.954252,
+            "sharpe": 0.545759,
+            "trades": 4,
+            "win_rate_pct": 75.0,
+            "profit_factor": 2.415274,
+            "expectancy_per_trade": 0.256372,
+            "avg_holding_hours": 47.0,
+            "total_fees": 0.2749,
+            "exposure_pct": 1.06,
+            "calmar": 0.527746
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "LTC/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 32.0,
+            "adx_max": 24.0,
+            "stop_atr": 2.2
+          },
+          "train": {
+            "net_return_pct": -3.181521,
+            "max_drawdown_pct": 3.309322,
+            "sharpe": -0.778381,
+            "trades": 11,
+            "win_rate_pct": 45.454545,
+            "profit_factor": 0.250693,
+            "expectancy_per_trade": -0.289229,
+            "avg_holding_hours": 50.909091,
+            "total_fees": 0.8755,
+            "exposure_pct": 1.79,
+            "calmar": -0.274449
+          },
+          "test": {
+            "net_return_pct": -0.434814,
+            "max_drawdown_pct": 3.369932,
+            "sharpe": -0.105854,
+            "trades": 13,
+            "win_rate_pct": 53.846154,
+            "profit_factor": 0.914598,
+            "expectancy_per_trade": -0.033447,
+            "avg_holding_hours": 38.153846,
+            "total_fees": 0.8833,
+            "exposure_pct": 2.79,
+            "calmar": -0.063598
+          },
+          "score": -1.129,
+          "status": "rejected"
+        }
+      ]
+    },
+    {
+      "symbol": "DOGE/USD",
+      "selected": {
+        "symbol": "DOGE/USD",
+        "strategy": "trend_breakout",
+        "params": {
+          "donchian": 20,
+          "trend_ema": 100,
+          "stop_atr": 2.5,
+          "trail_atr": 3.0,
+          "min_atr_pct": 1.0
+        },
+        "train": {
+          "net_return_pct": 8.499554,
+          "max_drawdown_pct": 5.302502,
+          "sharpe": 0.826989,
+          "trades": 30,
+          "win_rate_pct": 43.333333,
+          "profit_factor": 1.810464,
+          "expectancy_per_trade": 0.283318,
+          "avg_holding_hours": 68.0,
+          "total_fees": 2.2017,
+          "exposure_pct": 14.59,
+          "calmar": 0.989179
+        },
+        "test": {
+          "net_return_pct": 2.64459,
+          "max_drawdown_pct": 4.713125,
+          "sharpe": 0.581759,
+          "trades": 8,
+          "win_rate_pct": 25.0,
+          "profit_factor": 1.608726,
+          "expectancy_per_trade": 0.330574,
+          "avg_holding_hours": 67.5,
+          "total_fees": 0.7146,
+          "exposure_pct": 6.27,
+          "calmar": 0.57128
+        },
+        "score": 0.337,
+        "status": "selected"
+      },
+      "candidates": [
+        {
+          "symbol": "DOGE/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 20,
+            "trend_ema": 100,
+            "stop_atr": 2.5,
+            "trail_atr": 3.0,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": 8.499554,
+            "max_drawdown_pct": 5.302502,
+            "sharpe": 0.826989,
+            "trades": 30,
+            "win_rate_pct": 43.333333,
+            "profit_factor": 1.810464,
+            "expectancy_per_trade": 0.283318,
+            "avg_holding_hours": 68.0,
+            "total_fees": 2.2017,
+            "exposure_pct": 14.59,
+            "calmar": 0.989179
+          },
+          "test": {
+            "net_return_pct": 2.64459,
+            "max_drawdown_pct": 4.713125,
+            "sharpe": 0.581759,
+            "trades": 8,
+            "win_rate_pct": 25.0,
+            "profit_factor": 1.608726,
+            "expectancy_per_trade": 0.330574,
+            "avg_holding_hours": 67.5,
+            "total_fees": 0.7146,
+            "exposure_pct": 6.27,
+            "calmar": 0.57128
+          },
+          "score": 0.337,
+          "status": "selected"
+        },
+        {
+          "symbol": "DOGE/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 35,
+            "trend_ema": 100,
+            "stop_atr": 2.8,
+            "trail_atr": 3.4,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": 11.658969,
+            "max_drawdown_pct": 4.934693,
+            "sharpe": 1.042667,
+            "trades": 22,
+            "win_rate_pct": 45.454545,
+            "profit_factor": 2.983383,
+            "expectancy_per_trade": 0.529953,
+            "avg_holding_hours": 92.909091,
+            "total_fees": 1.4757,
+            "exposure_pct": 14.62,
+            "calmar": 1.450015
+          },
+          "test": {
+            "net_return_pct": 2.530229,
+            "max_drawdown_pct": 5.060314,
+            "sharpe": 0.639358,
+            "trades": 7,
+            "win_rate_pct": 42.857143,
+            "profit_factor": 1.858173,
+            "expectancy_per_trade": 0.361461,
+            "avg_holding_hours": 68.0,
+            "total_fees": 0.5795,
+            "exposure_pct": 5.53,
+            "calmar": 0.50907
+          },
+          "score": 0.3,
+          "status": "rejected"
+        },
+        {
+          "symbol": "DOGE/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 55,
+            "trend_ema": 100,
+            "stop_atr": 3.0,
+            "trail_atr": 4.0,
+            "min_atr_pct": 0.8
+          },
+          "train": {
+            "net_return_pct": 2.590296,
+            "max_drawdown_pct": 4.520381,
+            "sharpe": 0.301667,
+            "trades": 21,
+            "win_rate_pct": 23.809524,
+            "profit_factor": 1.33817,
+            "expectancy_per_trade": 0.123347,
+            "avg_holding_hours": 108.571429,
+            "total_fees": 1.2124,
+            "exposure_pct": 16.3,
+            "calmar": 0.357388
+          },
+          "test": {
+            "net_return_pct": 1.208312,
+            "max_drawdown_pct": 3.780674,
+            "sharpe": 0.393325,
+            "trades": 4,
+            "win_rate_pct": 50.0,
+            "profit_factor": 1.981811,
+            "expectancy_per_trade": 0.302078,
+            "avg_holding_hours": 81.0,
+            "total_fees": 0.303,
+            "exposure_pct": 3.76,
+            "calmar": 0.325353
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "DOGE/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 35.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": 4.233216,
+            "max_drawdown_pct": 2.08586,
+            "sharpe": 0.821898,
+            "trades": 8,
+            "win_rate_pct": 25.0,
+            "profit_factor": 2.727206,
+            "expectancy_per_trade": 0.529152,
+            "avg_holding_hours": 95.5,
+            "total_fees": 0.4196,
+            "exposure_pct": 5.46,
+            "calmar": 1.261976
+          },
+          "test": {
+            "net_return_pct": -0.191227,
+            "max_drawdown_pct": 1.850428,
+            "sharpe": -0.069154,
+            "trades": 5,
+            "win_rate_pct": 40.0,
+            "profit_factor": 0.885537,
+            "expectancy_per_trade": -0.038245,
+            "avg_holding_hours": 74.4,
+            "total_fees": 0.4924,
+            "exposure_pct": 4.32,
+            "calmar": -0.105188
+          },
+          "score": -0.657,
+          "status": "rejected"
+        },
+        {
+          "symbol": "DOGE/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 42.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": -6.082328,
+            "max_drawdown_pct": 10.402461,
+            "sharpe": -0.933572,
+            "trades": 27,
+            "win_rate_pct": 14.814815,
+            "profit_factor": 0.524318,
+            "expectancy_per_trade": -0.225271,
+            "avg_holding_hours": 57.333333,
+            "total_fees": 1.5987,
+            "exposure_pct": 11.07,
+            "calmar": -0.370701
+          },
+          "test": {
+            "net_return_pct": -2.818117,
+            "max_drawdown_pct": 3.583141,
+            "sharpe": -0.951686,
+            "trades": 10,
+            "win_rate_pct": 10.0,
+            "profit_factor": 0.342765,
+            "expectancy_per_trade": -0.281812,
+            "avg_holding_hours": 53.6,
+            "total_fees": 0.7761,
+            "exposure_pct": 6.22,
+            "calmar": -0.800354
+          },
+          "score": -1.786,
+          "status": "rejected"
+        },
+        {
+          "symbol": "DOGE/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 20,
+            "ema_slow": 100,
+            "rsi_reclaim": 40.0,
+            "stop_atr": 2.2,
+            "trail_atr": 2.8
+          },
+          "train": {
+            "net_return_pct": 2.194888,
+            "max_drawdown_pct": 4.893251,
+            "sharpe": 0.375285,
+            "trades": 15,
+            "win_rate_pct": 33.333333,
+            "profit_factor": 1.374149,
+            "expectancy_per_trade": 0.146326,
+            "avg_holding_hours": 46.4,
+            "total_fees": 0.8838,
+            "exposure_pct": 4.98,
+            "calmar": 0.27996
+          },
+          "test": {
+            "net_return_pct": 0.007636,
+            "max_drawdown_pct": 2.58138,
+            "sharpe": 0.015889,
+            "trades": 6,
+            "win_rate_pct": 33.333333,
+            "profit_factor": 1.003703,
+            "expectancy_per_trade": 0.001273,
+            "avg_holding_hours": 62.666667,
+            "total_fees": 0.5808,
+            "exposure_pct": 4.37,
+            "calmar": 0.003011
+          },
+          "score": 0.002,
+          "status": "rejected"
+        },
+        {
+          "symbol": "DOGE/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 30.0,
+            "adx_max": 22.0,
+            "stop_atr": 2.4
+          },
+          "train": {
+            "net_return_pct": -1.836841,
+            "max_drawdown_pct": 1.844836,
+            "sharpe": -0.85576,
+            "trades": 5,
+            "win_rate_pct": 40.0,
+            "profit_factor": 0.427055,
+            "expectancy_per_trade": -0.367368,
+            "avg_holding_hours": 41.6,
+            "total_fees": 0.35,
+            "exposure_pct": 1.49,
+            "calmar": -0.626122
+          },
+          "test": {
+            "net_return_pct": 0.388034,
+            "max_drawdown_pct": 0.313175,
+            "sharpe": 1.104162,
+            "trades": 1,
+            "win_rate_pct": 100.0,
+            "profit_factor": Infinity,
+            "expectancy_per_trade": 0.388034,
+            "avg_holding_hours": 40.0,
+            "total_fees": 0.1019,
+            "exposure_pct": 0.46,
+            "calmar": 1.261233
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "DOGE/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.4,
+            "rsi_entry": 28.0,
+            "adx_max": 20.0,
+            "stop_atr": 2.6
+          },
+          "train": {
+            "net_return_pct": 0.315062,
+            "max_drawdown_pct": 1.105491,
+            "sharpe": 0.27577,
+            "trades": 3,
+            "win_rate_pct": 66.666667,
+            "profit_factor": 1.329209,
+            "expectancy_per_trade": 0.105021,
+            "avg_holding_hours": 64.0,
+            "total_fees": 0.1903,
+            "exposure_pct": 1.37,
+            "calmar": 0.178497
+          },
+          "test": {
+            "net_return_pct": 0.358185,
+            "max_drawdown_pct": 0.289084,
+            "sharpe": 1.10416,
+            "trades": 1,
+            "win_rate_pct": 100.0,
+            "profit_factor": Infinity,
+            "expectancy_per_trade": 0.358185,
+            "avg_holding_hours": 40.0,
+            "total_fees": 0.094,
+            "exposure_pct": 0.46,
+            "calmar": 1.26123
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "DOGE/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 32.0,
+            "adx_max": 24.0,
+            "stop_atr": 2.2
+          },
+          "train": {
+            "net_return_pct": -2.706108,
+            "max_drawdown_pct": 3.29218,
+            "sharpe": -0.826884,
+            "trades": 10,
+            "win_rate_pct": 50.0,
+            "profit_factor": 0.493869,
+            "expectancy_per_trade": -0.270611,
+            "avg_holding_hours": 35.6,
+            "total_fees": 0.6537,
+            "exposure_pct": 2.55,
+            "calmar": -0.517754
+          },
+          "test": {
+            "net_return_pct": -0.902927,
+            "max_drawdown_pct": 1.268861,
+            "sharpe": -0.959355,
+            "trades": 3,
+            "win_rate_pct": 66.666667,
+            "profit_factor": 0.207617,
+            "expectancy_per_trade": -0.300976,
+            "avg_holding_hours": 45.333333,
+            "total_fees": 0.2836,
+            "exposure_pct": 1.58,
+            "calmar": -0.724271
+          },
+          "score": -999.0,
+          "status": "rejected"
+        }
+      ]
+    },
+    {
+      "symbol": "MATIC/USD",
+      "selected": {
+        "symbol": "MATIC/USD",
+        "strategy": "trend_breakout",
+        "params": {
+          "donchian": 20,
+          "trend_ema": 100,
+          "stop_atr": 2.5,
+          "trail_atr": 3.0,
+          "min_atr_pct": 1.0
+        },
+        "train": {
+          "net_return_pct": 0.0,
+          "max_drawdown_pct": -0.0,
+          "sharpe": null,
+          "trades": 0,
+          "win_rate_pct": null,
+          "profit_factor": null,
+          "expectancy_per_trade": null,
+          "avg_holding_hours": null,
+          "total_fees": 0.0,
+          "exposure_pct": 0.0,
+          "calmar": null
+        },
+        "test": {
+          "net_return_pct": 0.0,
+          "max_drawdown_pct": -0.0,
+          "sharpe": null,
+          "trades": 0,
+          "win_rate_pct": null,
+          "profit_factor": null,
+          "expectancy_per_trade": null,
+          "avg_holding_hours": null,
+          "total_fees": 0.0,
+          "exposure_pct": 0.0,
+          "calmar": null
+        },
+        "score": -999.0,
+        "status": "selected"
+      },
+      "candidates": [
+        {
+          "symbol": "MATIC/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 20,
+            "trend_ema": 100,
+            "stop_atr": 2.5,
+            "trail_atr": 3.0,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "test": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "score": -999.0,
+          "status": "selected"
+        },
+        {
+          "symbol": "MATIC/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 35,
+            "trend_ema": 100,
+            "stop_atr": 2.8,
+            "trail_atr": 3.4,
+            "min_atr_pct": 1.0
+          },
+          "train": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "test": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "MATIC/USD",
+          "strategy": "trend_breakout",
+          "params": {
+            "donchian": 55,
+            "trend_ema": 100,
+            "stop_atr": 3.0,
+            "trail_atr": 4.0,
+            "min_atr_pct": 0.8
+          },
+          "train": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "test": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "MATIC/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 35.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "test": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "MATIC/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 50,
+            "ema_slow": 200,
+            "rsi_reclaim": 42.0,
+            "stop_atr": 2.5,
+            "trail_atr": 3.2
+          },
+          "train": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "test": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "MATIC/USD",
+          "strategy": "trend_pullback",
+          "params": {
+            "ema_fast": 20,
+            "ema_slow": 100,
+            "rsi_reclaim": 40.0,
+            "stop_atr": 2.2,
+            "trail_atr": 2.8
+          },
+          "train": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "test": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "MATIC/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 30.0,
+            "adx_max": 22.0,
+            "stop_atr": 2.4
+          },
+          "train": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "test": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "MATIC/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.4,
+            "rsi_entry": 28.0,
+            "adx_max": 20.0,
+            "stop_atr": 2.6
+          },
+          "train": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "test": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "score": -999.0,
+          "status": "rejected"
+        },
+        {
+          "symbol": "MATIC/USD",
+          "strategy": "mean_reversion",
+          "params": {
+            "bb_window": 20,
+            "bb_std": 2.0,
+            "rsi_entry": 32.0,
+            "adx_max": 24.0,
+            "stop_atr": 2.2
+          },
+          "train": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "test": {
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": -0.0,
+            "sharpe": null,
+            "trades": 0,
+            "win_rate_pct": null,
+            "profit_factor": null,
+            "expectancy_per_trade": null,
+            "avg_holding_hours": null,
+            "total_fees": 0.0,
+            "exposure_pct": 0.0,
+            "calmar": null
+          },
+          "score": -999.0,
+          "status": "rejected"
+        }
+      ]
+    }
+  ]
+}

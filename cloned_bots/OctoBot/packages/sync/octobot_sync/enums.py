@@ -1,0 +1,34 @@
+#  This file is part of OctoBot Sync (https://github.com/Drakkar-Software/OctoBot)
+#  Copyright (c) 2025 Drakkar-Software, All rights reserved.
+#
+#  OctoBot is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either
+#  version 3.0 of the License, or (at your option) any later version.
+#
+#  OctoBot is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public
+#  License along with OctoBot. If not, see <https://www.gnu.org/licenses/>.
+
+import enum
+
+
+class Collections(enum.StrEnum):
+    USER_DATA = "user-data"
+    USER_ACCOUNTS = "user-accounts"
+    USER_ACCOUNTS_AUTH = "user-accounts-auth"
+    USER_ACCOUNTS_TRADING = "user-accounts-trading"
+    USER_ACCOUNTS_HISTORY = "user-accounts-history"
+    USER_ACCOUNTS_HISTORY_AGGREGATED_REAL = "user-accounts-history-aggregated-real"
+    USER_ACCOUNTS_HISTORY_AGGREGATED_SIMULATED = "user-accounts-history-aggregated-simulated"
+    USER_SETTINGS = "user-settings"
+    USER_ACTIONS = "user-actions"
+    DEBUG = "debug"
+
+class TemporaryCollections(enum.StrEnum):
+    # Temporary user-strategies collection; remove when strategies storage is finalized.
+    TEMP_USER_STRATEGIES = "user-strategies"

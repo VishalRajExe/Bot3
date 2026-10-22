@@ -1,0 +1,71 @@
+import contextlib
+import mock
+import os
+import pytest
+import sys
+
+_OCTOBOT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+_TESTS_ROOT = os.path.join(_OCTOBOT_ROOT, "tests")
+if _TESTS_ROOT not in sys.path:
+    sys.path.insert(0, _TESTS_ROOT)
+
+from test_utils.journal_test_support import disabled_node_journal_environment
+
+_TESTS_RUN_OCTOBOT_PROCESS_WAITING_TIME_SECONDS = 2
+_TESTS_RUN_OCTOBOT_PROCESS_PING_TIMEOUT_SECONDS = 30.0
+
+os.environ.setdefault(
+    "RUN_OCTOBOT_PROCESS_WAITING_TIME_SECONDS",
+    str(_TESTS_RUN_OCTOBOT_PROCESS_WAITING_TIME_SECONDS),
+)
+os.environ.setdefault(
+    "RUN_OCTOBOT_PROCESS_PING_TIMEOUT_SECONDS",
+    str(_TESTS_RUN_OCTOBOT_PROCESS_PING_TIMEOUT_SECONDS),
+)
+
+import octobot.community.local_authenticator as local_community_auth
+
+
+@contextlib.contextmanager
+def mocked_local_user_configuration():
+    with mock.patch.object(
+        local_community_auth,
+        "get_user_configuration",
+        local_community_auth.get_stateless_configuration,
+    ):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def disable_node_journal():
+    with disabled_node_journal_environment():
+        yield
+
+
+@pytest.fixture(autouse=True)
+def _mock_local_user_configuration():
+    with mocked_local_user_configuration():
+        yield
+
+
+@pytest.fixture(autouse=True)
+def _fast_run_octobot_process_recall(monkeypatch):
+    import octobot_node.constants as node_constants
+
+    monkeypatch.setattr(
+        node_constants,
+        "RUN_OCTOBOT_PROCESS_WAITING_TIME_SECONDS",
+        _TESTS_RUN_OCTOBOT_PROCESS_WAITING_TIME_SECONDS,
+    )
+    monkeypatch.setattr(
+        node_constants,
+        "RUN_OCTOBOT_PROCESS_PING_TIMEOUT_SECONDS",
+        _TESTS_RUN_OCTOBOT_PROCESS_PING_TIMEOUT_SECONDS,
+    )
+
+
+@pytest.fixture(autouse=True)
+def _disable_auto_open_in_web_browser():
+    import tentacles.Meta.DSL_operators.octobot_process_operators.octobot_process_ops as octobot_process_ops
+    with mock.patch.object(octobot_process_ops, "AUTO_OPEN_IN_WEB_BROWSER", False):
+        yield

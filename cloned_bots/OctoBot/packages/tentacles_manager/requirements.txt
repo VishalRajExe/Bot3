@@ -1,0 +1,11 @@
+# Tentacles compilation requirements
+setuptools
+
+# async files management
+aiofiles
+
+# async http requests
+aiohttp>=3.9.5
+
+# version comparison
+packaging>=25.0

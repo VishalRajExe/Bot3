@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>UniBot — 10-Coin Crypto Research & Paper Trading</title>
+<meta name="description" content="AI-powered multi-asset crypto paper trading dashboard with pattern recognition, ML models, and live Alpaca integration" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ============================================================= HEADER -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 32 32" width="32" height="32" fill="none">
+        <circle cx="16" cy="16" r="15" fill="url(#g1)" />
+        <path d="M10 22 L16 10 L22 22 M12.5 18h7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="g1" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#6366f1"/>
+            <stop offset="1" stop-color="#8b5cf6"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">UniBot</div>
+      <div class="brand-sub">10 markets · 4h swing · $100 paper · Alpaca</div>
+    </div>
+  </div>
+
+  <div class="headline" id="hdr-stats">
+    <div class="headline-item">
+      <span class="label">Equity</span>
+      <span class="value" id="hdr-equity">—</span>
+    </div>
+    <div class="headline-item">
+      <span class="label">Open P&L</span>
+      <span class="value" id="hdr-open">—</span>
+    </div>
+    <div class="headline-item">
+      <span class="label">Realized</span>
+      <span class="value" id="hdr-realized">—</span>
+    </div>
+    <div class="headline-item">
+      <span class="label">Positions</span>
+      <span class="value" id="hdr-pos">0/2</span>
+    </div>
+    <div class="headline-item">
+      <span class="label">Regime</span>
+      <span class="value regime-badge" id="hdr-regime">—</span>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <div class="status-group">
+      <span class="pill pill-paper">📄 PAPER ONLY</span>
+      <span class="pill" id="pill-loop">⏳ connecting…</span>
+    </div>
+    <div class="status-indicator" id="status-dot">
+      <span class="dot"></span>
+      <span id="status-text">connecting</span>
+    </div>
+  </div>
+</header>
+
+<!-- ================================================================ TABS -->
+<nav class="tabs" id="tabs" role="tablist">
+  <button class="tab active" data-view="overview" role="tab">🏠 Overview</button>
+  <button class="tab" data-view="charts" role="tab">📈 Charts</button>
+  <button class="tab" data-view="trades" role="tab">💼 Trades</button>
+  <button class="tab" data-view="models" role="tab">🧠 AI Models</button>
+  <button class="tab" data-view="backtests" role="tab">🔬 Research</button>
+  <button class="tab" data-view="risk" role="tab">🛡️ Risk & Data</button>
+</nav>
+
+<!-- ============================================================== MAIN -->
+<main>
+
+  <!-- ===================================================== OVERVIEW TAB -->
+  <section class="view active" id="view-overview">
+
+    <!-- KPI strip -->
+    <div class="kpi-strip" id="kpis"></div>
+
+    <div class="grid-2-1">
+
+      <!-- LEFT: market board + decisions -->
+      <div class="col-stack">
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>🌐 Market board</h2>
+              <div class="muted small">Live prices · trend · signal · AI gate · 4h bar</div>
+            </div>
+            <span class="badge-live" id="board-updated">—</span>
+          </div>
+          <div class="board-grid" id="board"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>📡 Decision feed</h2>
+            <span class="muted small">every signal on every bar, including holds</span>
+          </div>
+          <div class="feed" id="decisions"></div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: positions, regime, equity curve -->
+      <div class="col-stack">
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>📂 Open positions</h2>
+            <span class="muted small" id="pos-count">0 / 2 slots</span>
+          </div>
+          <div id="positions" class="positions-list"></div>
+          <div class="no-data" id="no-positions">No open positions</div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>🌊 Market regime</h2>
+            <span class="muted small" id="regime-at">—</span>
+          </div>
+          <div id="regime-body" class="regime-cards"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>📊 Equity curve</h2>
+            <span class="muted small">paper account balance over time</span>
+          </div>
+          <div class="chart-wrap-sm">
+            <canvas id="equity-mini"></canvas>
+          </div>
+          <div class="equity-footer" id="equity-footer"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>🛑 Risk state</h2>
+            <span class="muted small">hard limits – cannot be overridden</span>
+          </div>
+          <div id="risk-body" class="risk-grid"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ===================================================== CHARTS TAB -->
+  <section class="view" id="view-charts">
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>📈 Price action & indicators</h2>
+          <div class="chips-row">
+            <div id="symbol-chips" class="chips"></div>
+          </div>
+        </div>
+        <div class="chart-controls-right">
+          <div class="seg-group" id="tf-chips">
+            <button class="seg active" data-tf="4H">4H</button>
+            <button class="seg" data-tf="1D">1D</button>
+          </div>
+          <span class="muted small" id="chart-meta">—</span>
+        </div>
+      </div>
+
+      <!-- Main candlestick area (drawn by Chart.js + chartjs-chart-financial) -->
+      <div class="chart-container">
+        <canvas id="price-chart"></canvas>
+      </div>
+
+      <div class="chart-legend">
+        <span><i class="sw sw-ema50"></i>EMA 50</span>
+        <span><i class="sw sw-ema200"></i>EMA 200</span>
+        <span><i class="sw sw-bb"></i>Bollinger Bands</span>
+        <span><i class="sw sw-buy"></i>entry signal</span>
+        <span><i class="sw sw-sell"></i>exit signal</span>
+        <span class="muted">Click a marker to see trade detail</span>
+      </div>
+
+      <!-- Sub-panels -->
+      <div class="grid-2" style="margin-top:1rem">
+        <div class="panel">
+          <div class="sub-head">RSI (14) · Momentum</div>
+          <div class="chart-wrap-sm">
+            <canvas id="rsi-chart"></canvas>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="sub-head">ATR % · Volatility</div>
+          <div class="chart-wrap-sm">
+            <canvas id="atr-chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trade detail card -->
+      <div class="panel" id="trade-detail-card" style="display:none;margin-top:1rem">
+        <div class="panel-head"><h3>Trade detail</h3><button class="close-btn" id="close-detail">✕</button></div>
+        <div id="trade-detail-body"></div>
+      </div>
+    </div>
+
+    <!-- Symbol snapshot sidebar -->
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-head"><h2>📋 Symbol snapshot</h2><span class="muted small" id="snap-sym">—</span></div>
+      <div id="symbol-snapshot" class="snap-grid"></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== TRADES TAB -->
+  <section class="view" id="view-trades">
+
+    <div class="kpi-strip" id="trade-kpis"></div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>💼 Closed trades</h2>
+        <div class="row gap">
+          <select id="trade-mode" class="select">
+            <option value="live">live paper</option>
+            <option value="backtest">backtests</option>
+          </select>
+          <select id="trade-sym-filter" class="select">
+            <option value="">all symbols</option>
+          </select>
+          <span class="muted small" id="trade-count"></span>
+        </div>
+      </div>
+      <div id="trades-table" class="table-wrap"></div>
+    </div>
+
+    <!-- Win/loss analysis -->
+    <div class="grid-2" style="margin-top:1rem">
+      <div class="panel">
+        <div class="panel-head"><h3>Exit breakdown</h3></div>
+        <div class="chart-wrap-md" id="exit-wrap">
+          <canvas id="exit-chart"></canvas>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>P&L distribution</h3></div>
+        <div class="chart-wrap-md" id="pnl-wrap">
+          <canvas id="pnl-hist"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-head"><h3>Equity & drawdown</h3><span class="muted small" id="curve-label">paper trades</span></div>
+      <div class="chart-wrap-md" id="trade-equity-wrap">
+        <canvas id="trade-equity"></canvas>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ===================================================== MODELS TAB -->
+  <section class="view" id="view-models">
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>🧠 Per-coin AI models</h2>
+            <div class="muted small">gradient-boosted meta-labeling gates · walk-forward validation</div>
+          </div>
+        </div>
+        <div id="models-table" class="table-wrap"></div>
+        <div class="note mt">
+          A model is only promoted when out-of-sample AUC ≥ 0.55. Rejected models stay in the registry
+          but are never used for trading. No model can override hard risk limits.
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>📚 What the bot has learned</h2>
+          <span class="muted small">bounded adaptation – no self-modification of strategy code</span>
+        </div>
+        <div id="learning-rules" class="rules-list"></div>
+        <div class="panel-head mt"><h3>Lessons from trades</h3><span class="muted small" id="lesson-count"></span></div>
+        <div id="lessons" class="feed"></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-head"><h2>🔬 Trade memory by cohort</h2><span class="muted small">win rate · expectancy · regime breakdown</span></div>
+      <div id="cohorts" class="table-wrap"></div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-head"><h2>🧪 Experiments</h2><span class="muted small">accepted = worth testing, never "proven"</span></div>
+      <div id="experiments" class="table-wrap"></div>
+    </div>
+
+  </section>
+
+  <!-- =================================================== RESEARCH TAB -->
+  <section class="view" id="view-backtests">
+
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>🔬 Research runs</h2>
+          <div class="muted small">Every row is a reproducible run with stored dataset hash, cost model, and full trade log</div>
+        </div>
+        <div class="row gap">
+          <select id="run-select" class="select"></select>
+          <button class="btn ghost" id="refresh-runs">↻ Refresh</button>
+        </div>
+      </div>
+      <div id="run-summary" class="kpi-strip"></div>
+
+      <div class="grid-2" style="margin-top:1rem">
+        <div class="panel">
+          <div class="panel-head"><h3>📊 Equity curve</h3><span class="muted small" id="run-period"></span></div>
+          <div class="chart-wrap-md">
+            <canvas id="run-equity"></canvas>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>🏁 Benchmarks</h3><span class="muted small">same window, same costs</span></div>
+          <div id="run-bench" class="bench-cards"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-head"><h2>Per-symbol contribution</h2></div>
+      <div id="run-symbols" class="table-wrap"></div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-head"><h2>Per-strategy breakdown</h2></div>
+      <div id="run-strategies" class="table-wrap"></div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-head"><h2>📋 All trades in this run</h2><span class="muted small" id="run-trade-count"></span></div>
+      <div id="run-trades" class="table-wrap"></div>
+    </div>
+
+    <!-- Run a new backtest form -->
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-head"><h2>🚀 Run a new backtest</h2></div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label for="bt-start">Start date</label>
+          <input id="bt-start" type="date" value="2022-01-01" />
+        </div>
+        <div class="form-row">
+          <label for="bt-end">End date (blank = now)</label>
+          <input id="bt-end" type="date" />
+        </div>
+        <div class="form-row">
+          <label for="bt-equity">Initial equity ($)</label>
+          <input id="bt-equity" type="number" value="100" min="10" max="100000" />
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="btn-backtest">▶ Run portfolio backtest</button>
+      </div>
+      <div id="bt-status" class="note"></div>
+    </div>
+
+  </section>
+
+  <!-- ====================================================== RISK TAB -->
+  <section class="view" id="view-risk">
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><h2>🛑 Circuit breakers</h2><span class="muted small">latched state – reset requires manual action</span></div>
+        <div id="breaker-body" class="breaker-grid"></div>
+        <div class="panel-head mt"><h2>🔄 Reconciliation</h2><span class="muted small" id="recon-status"></span></div>
+        <div id="recon-body" class="recon-detail"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>💰 Cost model</h2><span class="muted small">Alpaca crypto – applied to every simulated fill</span></div>
+        <div id="cost-body" class="cost-grid"></div>
+        <div class="panel-head mt"><h2>⚙️ Risk limits</h2><span class="muted small">read-only in UI · edit config/unibot.json to change</span></div>
+        <div id="risk-limits" class="cost-grid"></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-head"><h2>📊 Data coverage</h2><span class="muted small">gaps are recorded, never interpolated</span></div>
+      <div id="data-table" class="table-wrap"></div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-head">
+        <h2>🔔 Alert delivery log</h2>
+        <span class="muted small">Telegram notifications sent by the bot</span>
+      </div>
+      <div id="alerts" class="feed"></div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-head">
+        <h2>📜 Live System Logs</h2>
+        <span class="muted small">Real-time log tail from logs/unibot.log</span>
+      </div>
+      <div id="system-logs" class="terminal-log">Loading system logs…</div>
+    </div>
+
+    <!-- Controls -->
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-head"><h2>🎛️ Live engine controls</h2><span class="muted small">paper mode – no real orders</span></div>
+      <div class="btn-row" style="flex-wrap:wrap;gap:.75rem">
+        <button class="btn primary" id="btn-cycle">▶ Run one cycle now</button>
+        <button class="btn" id="btn-pause">⏸ Pause entries</button>
+        <button class="btn" id="btn-resume">▶ Resume</button>
+        <button class="btn danger" id="btn-reset-dd">Reset drawdown breaker</button>
+        <a class="btn ghost" href="/api/export" download="unibot-export.json">⬇ Export JSON</a>
+      </div>
+      <div id="ctrl-status" class="note"></div>
+    </div>
+
+  </section>
+
+</main>
+
+<footer>
+  <span>Paper trading only · No live order path in this build · Alpaca paper account</span>
+  <span id="footer-time"></span>
+</footer>
+
+<!-- Chart.js + date adapter + financial plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

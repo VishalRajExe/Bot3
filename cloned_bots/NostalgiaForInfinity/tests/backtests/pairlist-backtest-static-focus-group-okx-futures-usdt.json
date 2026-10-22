@@ -1,0 +1,77 @@
+{
+  "exchange": {
+    "name": "okx",
+    "pair_whitelist": [
+      "AGLD/USDT:USDT",
+      "ALGO/USDT:USDT",
+      "BNT/USDT:USDT",
+      "BSV/USDT:USDT",
+      "CORE/USDT:USDT",
+      "CRV/USDT:USDT",
+      "CSPR/USDT:USDT",
+      "CVC/USDT:USDT",
+      "DOT/USDT:USDT",
+      "EGLD/USDT:USDT",
+      "ENS/USDT:USDT",
+      "FLM/USDT:USDT",
+      "FLOKI/USDT:USDT",
+      "GODS/USDT:USDT",
+      "GRT/USDT:USDT",
+      "ICP/USDT:USDT",
+      "IOTA/USDT:USDT",
+      "LOOKS/USDT:USDT",
+      "LPT/USDT:USDT",
+      "LUNA/USDT:USDT",
+      "RVN/USDT:USDT",
+      "SHIB/USDT:USDT",
+      "SLP/USDT:USDT",
+      "SNX/USDT:USDT",
+      "SOL/USDT:USDT",
+      "STORJ/USDT:USDT",
+      "THETA/USDT:USDT",
+      "TRB/USDT:USDT",
+      "UMA/USDT:USDT",
+      //
+      // __
+      // ___
+      // __OLD pairs
+      // "ADA/USDT:USDT",
+      // "ALPHA/USDT:USDT",
+      // "AVAX/USDT:USDT",
+      // "AXS/USDT:USDT",
+      // "BADGER/USDT:USDT",
+      // "BAL/USDT:USDT",
+      // "BCH/USDT:USDT",
+      // "BNB/USDT:USDT",
+      // "BTC/USDT:USDT",
+      // "DASH/USDT:USDT",
+      // "DOGE/USDT:USDT",
+      // "DYDX/USDT:USDT",
+      // "EOS/USDT:USDT",
+      // "FIL/USDT:USDT",
+      // "GFT/USDT:USDT",
+      // "IMX/USDT:USDT",
+      // "IOST/USDT:USDT",
+      // "LUNC/USDT:USDT",
+      // "MANA/USDT:USDT",
+      // "MASK/USDT:USDT",
+      // "MATIC/USDT:USDT",
+      // "NEO/USDT:USDT",
+      // "NFT/USDT:USDT",
+      // "OMG/USDT:USDT",
+      // "PEOPLE/USDT:USDT",
+      // "PERP/USDT:USDT",
+      // "REN/USDT:USDT",
+      // "RSR/USDT:USDT",
+      // "TRX/USDT:USDT",
+      // "XLM/USDT:USDT",
+      // "XMR/USDT:USDT",
+      // "ZEC/USDT:USDT",
+    ]
+  },
+  "pairlists": [
+    {
+      "method": "StaticPairList"
+    }
+  ]
+}

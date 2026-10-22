@@ -1,0 +1,10 @@
+# Setup requirements
+numpy
+
+# Commons requirements
+cryptography
+sortedcontainers
+requests
+pydantic
+
+aiohttp>=3.9.5

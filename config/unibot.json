@@ -1,0 +1,234 @@
+{
+  "capital": 100.0,
+  "base_timeframe": "1h",
+  "timeframe": "4h",
+  "history_start": "2021-01-01",
+  "hourly_start": "2024-01-01",
+  "warmup_bars": 420,
+  "universe": [
+    {
+      "symbol": "BTC/USD",
+      "cluster": "btc",
+      "strategy": "trend_breakout",
+      "trade_enabled": true,
+      "role": "regime_anchor",
+      "params": {
+        "donchian": 20,
+        "trend_ema": 100,
+        "stop_atr": 2.5,
+        "trail_atr": 3.0,
+        "min_atr_pct": 1.0
+      }
+    },
+    {
+      "symbol": "ETH/USD",
+      "cluster": "l1",
+      "strategy": "trend_breakout",
+      "trade_enabled": true,
+      "params": {
+        "donchian": 35,
+        "trend_ema": 100,
+        "stop_atr": 2.8,
+        "trail_atr": 3.4,
+        "min_atr_pct": 1.0
+      }
+    },
+    {
+      "symbol": "SOL/USD",
+      "cluster": "l1",
+      "strategy": "trend_breakout",
+      "trade_enabled": true,
+      "params": {
+        "donchian": 35,
+        "trend_ema": 100,
+        "stop_atr": 2.8,
+        "trail_atr": 3.4,
+        "min_atr_pct": 1.0
+      }
+    },
+    {
+      "symbol": "AVAX/USD",
+      "cluster": "l1",
+      "strategy": "trend_breakout",
+      "trade_enabled": true,
+      "params": {
+        "donchian": 55,
+        "trend_ema": 100,
+        "stop_atr": 3.0,
+        "trail_atr": 4.0,
+        "min_atr_pct": 0.8
+      }
+    },
+    {
+      "symbol": "LINK/USD",
+      "cluster": "defi",
+      "strategy": "trend_breakout",
+      "trade_enabled": true,
+      "params": {
+        "donchian": 55,
+        "trend_ema": 100,
+        "stop_atr": 3.0,
+        "trail_atr": 4.0,
+        "min_atr_pct": 0.8
+      }
+    },
+    {
+      "symbol": "UNI/USD",
+      "cluster": "defi",
+      "strategy": "trend_breakout",
+      "trade_enabled": true,
+      "params": {
+        "donchian": 35,
+        "trend_ema": 100,
+        "stop_atr": 2.8,
+        "trail_atr": 3.4,
+        "min_atr_pct": 1.0
+      }
+    },
+    {
+      "symbol": "AAVE/USD",
+      "cluster": "defi",
+      "strategy": "trend_breakout",
+      "trade_enabled": true,
+      "params": {
+        "donchian": 55,
+        "trend_ema": 100,
+        "stop_atr": 3.0,
+        "trail_atr": 4.0,
+        "min_atr_pct": 0.8
+      }
+    },
+    {
+      "symbol": "XRP/USD",
+      "cluster": "payment",
+      "strategy": "trend_pullback",
+      "trade_enabled": true,
+      "params": {
+        "ema_fast": 50,
+        "ema_slow": 200,
+        "rsi_reclaim": 42.0,
+        "stop_atr": 2.5,
+        "trail_atr": 3.2
+      }
+    },
+    {
+      "symbol": "LTC/USD",
+      "cluster": "payment",
+      "strategy": "trend_breakout",
+      "trade_enabled": true,
+      "params": {
+        "donchian": 55,
+        "trend_ema": 100,
+        "stop_atr": 3.0,
+        "trail_atr": 4.0,
+        "min_atr_pct": 0.8
+      }
+    },
+    {
+      "symbol": "DOGE/USD",
+      "cluster": "meme",
+      "strategy": "trend_breakout",
+      "trade_enabled": true,
+      "params": {
+        "donchian": 20,
+        "trend_ema": 100,
+        "stop_atr": 2.5,
+        "trail_atr": 3.0,
+        "min_atr_pct": 1.0
+      }
+    },
+    {
+      "symbol": "MATIC/USD",
+      "cluster": "l1",
+      "strategy": "trend_pullback",
+      "trade_enabled": false,
+      "execution_symbol": "POL/USD",
+      "note": "Alpaca delisted MATIC/USD. POL/USD is the same network's successor token but only has ~8 months of history, so MATIC history is used for research and live execution is disabled until POL liquidity/history pass the data gate.",
+      "params": {
+        "ema_fast": 50,
+        "ema_slow": 200,
+        "rsi_window": 14,
+        "rsi_reclaim": 40.0,
+        "stop_atr": 2.8,
+        "trail_atr": 3.4,
+        "min_atr_pct": 1.3,
+        "max_atr_pct": 20.0
+      }
+    }
+  ],
+  "costs": {
+    "taker_fee_bps": 25.0,
+    "maker_fee_bps": 15.0,
+    "spread_bps": 4.0,
+    "slippage_bps": 5.0,
+    "min_notional": 1.0,
+    "qty_step": 1e-09,
+    "price_tick": 1e-09
+  },
+  "risk": {
+    "risk_per_trade_pct": 1.0,
+    "max_positions": 2,
+    "max_per_cluster": 1,
+    "max_position_pct": 35.0,
+    "cash_reserve_pct": 25.0,
+    "portfolio_heat_pct": 2.0,
+    "daily_loss_limit_pct": 3.0,
+    "max_drawdown_pct": 12.0,
+    "consecutive_losses_limit": 3,
+    "cooldown_hours": 12.0,
+    "loss_cooldown_bars": 3,
+    "regime_multipliers": {
+      "bull": 1.0,
+      "chop": 0.6,
+      "bear": 0.25
+    },
+    "min_expected_edge_bps": 150.0,
+    "max_bar_return_pct": 25.0
+  },
+  "models": {
+    "enabled": true,
+    "algorithm": "gradient_boosting",
+    "horizon_bars": 18,
+    "u_barrier_atr": 2.0,
+    "l_barrier_atr": 1.0,
+    "min_samples": 60,
+    "min_test_samples": 25,
+    "min_auc": 0.55,
+    "min_oos_improvement_pct": 0.0,
+    "train_months": 18,
+    "test_months": 4,
+    "step_months": 4,
+    "purge_bars": 24,
+    "retrain_every_trades": 25
+  },
+  "alpaca": {
+    "paper_base_url": "https://paper-api.alpaca.markets",
+    "data_base_url": "https://data.alpaca.markets",
+    "data_feed": "us",
+    "use_stop_orders": true,
+    "stop_limit_buffer_pct": 1.5,
+    "reconcile_seconds": 300
+  },
+  "telegram": {
+    "enabled": true,
+    "notify_holds": true,
+    "hold_digest_minutes": 240,
+    "rate_limit_per_minute": 18
+  },
+  "paper": {
+    "poll_seconds": 60,
+    "decision_timeframe": "4h",
+    "trade_on_bar_close": true,
+    "max_order_slippage_bps": 40.0
+  },
+  "api": {
+    "host": "127.0.0.1",
+    "port": 8610
+  },
+  "paths": {
+    "db": "data/unibot.sqlite3",
+    "models": "data/models",
+    "reports": "reports/unibot",
+    "dashboard": "web/unibot"
+  }
+}

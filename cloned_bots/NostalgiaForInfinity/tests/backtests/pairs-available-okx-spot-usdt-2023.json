@@ -1,0 +1,66 @@
+// Okx Futures Pairs Available Since 2023
+{
+  "exchange": {
+    "name": "okx",
+    "pair_whitelist": [
+      "ACH/USDT",
+      "AGIX/USDT",
+      "ARB/USDT",
+      "BIGTIME/USDT",
+      "BLUR/USDT",
+      "BONE/USDT",
+      "CETUS/USDT",
+      "CGL/USDT",
+      "CORE/USDT",
+      "DORA/USDT",
+      "ENJ/USDT",
+      "FET/USDT",
+      "FLR/USDT",
+      "FXS/USDT",
+      "GAL/USDT",
+      "GFT/USDT",
+      "GMX/USDT",
+      "GOAL/USDT",
+      "ID/USDT",
+      "IGU/USDT",
+      "INJ/USDT",
+      "JPG/USDT",
+      "LBR/USDT",
+      "LHINU/USDT",
+      "LQTY/USDT",
+      "MEME/USDT",
+      "MYRIA/USDT",
+      "OMN/USDT",
+      "ORDI/USDT",
+      "PEPE/USDT",
+      "PYTH/USDT",
+      "RADAR/USDT",
+      "RDNT/USDT",
+      "RNDR/USDT",
+      "RPL/USDT",
+      "SPURS/USDT",
+      "SSV/USDT",
+      "SSWP/USDT",
+      "STETH/USDT",
+      "SUI/USDT",
+      "TIA/USDT",
+      "TURBO/USDT",
+      "VELA/USDT",
+      "VELODROME/USDT",
+      "WIFI/USDT",
+      "WLD/USDT",
+      "WSM/USDT"
+    ],
+    "ccxt_config": {
+      "enableRateLimit": true,
+      "rateLimit": 600,
+      "timeout": 60000
+    },
+    "ccxt_async_config": {
+      "enableRateLimit": true,
+      "rateLimit": 600,
+      "timeout": 60000
+    }
+  },
+  "pairlists": [{ "method": "StaticPairList" }]
+}

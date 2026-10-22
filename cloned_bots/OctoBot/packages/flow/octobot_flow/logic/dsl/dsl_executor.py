@@ -1,0 +1,213 @@
+import typing
+import contextlib
+
+import octobot_commons.dsl_interpreter
+import octobot_commons.signals
+import octobot_commons.errors
+import octobot_commons.profiles
+import octobot_commons.profiles.profile_types.ephemeral_profile as ephemeral_profile_module
+import octobot_commons.logging
+import octobot_trading.exchanges
+import octobot_trading.dsl
+import octobot_trading.modes as trading_modes
+import octobot_evaluators.evaluators as evaluators
+
+import octobot_flow.environment
+import octobot_flow.errors
+import octobot_flow.enums
+import octobot_flow.logic.dsl.action_error_util
+
+# avoid circular import
+from octobot_flow.logic.dsl.dsl_action_execution_context import dsl_action_execution
+from octobot_flow.logic.actions.abstract_action_executor import AbstractActionExecutor
+from octobot_flow.logic.dsl.dsl_actions_util import is_recallable_dsl_action
+
+import tentacles.Meta.DSL_operators as dsl_operators
+
+
+class DSLExecutor(AbstractActionExecutor):
+    def __init__(
+        self,
+        profile_data: octobot_commons.profiles.ProfileData,
+        exchange_manager: typing.Optional[octobot_trading.exchanges.ExchangeManager],
+        dsl_script: typing.Optional[str],
+        dependencies: typing.Optional[octobot_commons.signals.SignalDependencies] = None,
+        executor_id: typing.Optional[str] = None,
+    ):
+        super().__init__()
+        self._exchange_manager = exchange_manager
+        self._dependencies = dependencies
+        self._dependencies_config: dict = ephemeral_profile_module.EphemeralProfile.from_profile_data(
+            profile_data
+        ).config
+        self._interpreter_signals: octobot_commons.dsl_interpreter.OperatorSignals = None # type: ignore (reset when interpreter is created)
+        self._interpreter: octobot_commons.dsl_interpreter.Interpreter = self._create_interpreter(
+            None, executor_id
+        )
+        if dsl_script:
+            self._interpreter.prepare(dsl_script)
+
+    def _get_matrix_id(self) -> typing.Optional[str]:
+        if self._exchange_manager is None:
+            return None
+        return octobot_trading.exchanges.Exchanges.instance().get_matrix_id(self._exchange_manager)
+
+    def get_flow_operator_classes(
+        self,
+        executor_id: typing.Optional[str] = None,
+    ) -> list[typing.Type[octobot_commons.dsl_interpreter.Operator]]:
+        resolved_executor_id = (
+            executor_id or octobot_flow.environment.get_executor_id()
+        )
+        if not resolved_executor_id:
+            raise octobot_flow.errors.MissingDSLExecutorDependencyError(
+                "executor_id is required for run_octobot_process"
+            )
+        return (
+            octobot_commons.dsl_interpreter.get_all_operators()
+            + dsl_operators.create_ohlcv_operators(self._exchange_manager, None, None)
+            + dsl_operators.create_price_operators(self._exchange_manager, None)
+            + dsl_operators.create_portfolio_operators(self._exchange_manager)
+            + dsl_operators.create_create_order_operators(
+                self._exchange_manager, trading_mode=None, dependencies=self._dependencies
+            )
+            + dsl_operators.create_cancel_order_operators(
+                self._exchange_manager, trading_mode=None, dependencies=self._dependencies
+            )
+            + dsl_operators.create_stop_automation_operators(
+                self._exchange_manager, trading_mode=None, dependencies=self._dependencies
+            )
+            + dsl_operators.create_fetch_order_operators(self._exchange_manager)
+            + dsl_operators.create_blockchain_wallet_operators(self._exchange_manager)
+            + evaluators.create_all_evaluator_operators(
+                self._exchange_manager, self._dependencies_config, self._get_matrix_id()
+            )
+            + trading_modes.create_all_trading_mode_operators(
+                self._exchange_manager, self._dependencies_config, self._get_matrix_id()
+            )
+            + dsl_operators.create_copy_exchange_account_operators(
+                copier_exchange_manager=self._exchange_manager,
+                copier_trading_mode=None,
+            )
+            + dsl_operators.create_recall_when_relevant_for_context_operators(
+                self._exchange_manager,
+            )
+            + dsl_operators.create_octobot_process_operators(
+                self._interpreter_signals,
+                resolved_executor_id,
+            )
+        ) # type: ignore (list[type[Operator]])
+
+    def _create_interpreter(
+        self,
+        previous_execution_result: typing.Optional[dict],
+        executor_id: typing.Optional[str] = None,
+    ) -> octobot_commons.dsl_interpreter.Interpreter:
+        self._interpreter_signals = octobot_commons.dsl_interpreter.OperatorSignals()
+        return octobot_commons.dsl_interpreter.Interpreter(
+            self.get_flow_operator_classes(executor_id)
+        )
+
+    def get_dependencies(self) -> list[
+        octobot_commons.dsl_interpreter.InterpreterDependency
+    ]:
+        return self._interpreter.get_dependencies()
+
+    def get_top_operator(self) -> typing.Union[
+        octobot_commons.dsl_interpreter.Operator,
+        octobot_commons.dsl_interpreter.ComputedOperatorParameterType,
+    ]:
+        return self._interpreter.get_top_operator()
+
+    def is_action_recallable(
+        self, action: octobot_flow.entities.DSLScriptActionDetails
+    ) -> bool:
+        return is_recallable_dsl_action(self, action)
+
+    @dsl_action_execution
+    async def execute_action(
+        self,
+        action: octobot_flow.entities.DSLScriptActionDetails,
+        *,
+        operator_signals: typing.Optional[
+            list[tuple[
+                typing.Type[octobot_commons.dsl_interpreter.SignalableOperatorMixin],
+                str
+            ]]
+        ] = None,
+    ) -> octobot_commons.dsl_interpreter.DSLCallResult:
+        self._interpreter = self._create_interpreter(
+            action.previous_execution_result,
+            None,
+        )
+        expression = action.get_resolved_dsl_script()
+        try:
+            if operator_signals:
+                signals_update = {
+                    operator_class.get_name(): signal # type: ignore
+                    for operator_class, signal in operator_signals
+                }
+                self._logger().info(f"Executing action with operator signals: {signals_update}")
+            else:
+                signals_update = {}
+            self._interpreter_signals.sync(signals_update)
+            interpretation = await self._interpreter.interprete(expression)
+            return octobot_commons.dsl_interpreter.DSLCallResult(
+                statement=expression,
+                result=interpretation,
+            )
+        except octobot_commons.errors.MaxAttemptsExceededError as err:
+            self._logger().error(f"Max attempts exceeded: {err}")
+            return octobot_flow.logic.dsl.action_error_util.build_dsl_call_result(
+                expression,
+                octobot_flow.enums.ActionErrorStatus.MAX_ATTEMPTS_EXCEEDED.value,
+                str(err),
+            )
+        except octobot_commons.errors.ErrorStatementEncountered as err:
+            self._logger().exception(
+                err, True, f"Generic DSL error statement encountered: {err}"
+            )
+            error_status, error_message = octobot_flow.logic.dsl.action_error_util.resolve_error_statement(err)
+            return octobot_flow.logic.dsl.action_error_util.build_dsl_call_result(
+                expression,
+                error_status,
+                error_message,
+            )
+
+    @contextlib.asynccontextmanager
+    async def dependencies_context(
+        self, actions: list[octobot_flow.entities.AbstractActionDetails]
+    ) -> typing.AsyncGenerator[None, None]:
+        try:
+            all_dependencies = self._get_all_dependencies(actions) if actions else []
+            # 1. validate static dependencies
+            self._validate_dependencies(all_dependencies)
+            # 2. instanciate dynamic dependencies
+            # todo initialize dynamic dependencies when implemented
+            yield
+        finally:
+            # todo clean up dynamic dependencies when required
+            pass
+
+    def _validate_dependencies(self, dependencies: list[octobot_commons.dsl_interpreter.InterpreterDependency]):
+        if any(
+            isinstance(dependency, octobot_trading.dsl.SymbolDependency) for dependency in dependencies
+        ) and not self._exchange_manager:
+            raise octobot_flow.errors.MissingDSLExecutorDependencyError(
+                "Exchange manager is required when using symbol dependencies"
+            )
+
+    def _get_all_dependencies(
+        self, actions: list[octobot_flow.entities.AbstractActionDetails]
+    ) -> list[octobot_commons.dsl_interpreter.InterpreterDependency]:
+        dependencies = []
+        for action in actions:
+            if isinstance(action, octobot_flow.entities.DSLScriptActionDetails):
+                dsl_script = action.get_resolved_dsl_script()
+                self._interpreter.prepare(dsl_script)
+                dependencies.extend(self._interpreter.get_dependencies())
+        return dependencies
+
+    @classmethod
+    def _logger(cls) -> octobot_commons.logging.BotLogger:
+        return octobot_commons.logging.get_logger(cls.__name__)

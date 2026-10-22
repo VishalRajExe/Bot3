@@ -1,0 +1,1293 @@
+import math
+from jesse.services import candle_service
+import numpy as np
+import pytest
+
+import jesse.helpers as jh
+from jesse import research
+from jesse import exceptions
+from jesse.config import reset_config
+from jesse.enums import exchanges, timeframes, order_types
+from jesse.factories import range_candles, candles_from_close_prices
+from jesse.models import ClosedTrade
+from jesse.models.Order import Order
+from jesse.modes import backtest_mode
+from jesse.routes import router
+from jesse.store import store
+from jesse.strategies import Strategy
+from tests.data import test_candles_0
+from tests.data import test_candles_1
+from jesse.testing_utils import set_up, single_route_backtest, two_routes_backtest, two_data_routes_backtest
+
+
+def test_average_stop_loss_exception():
+    with pytest.raises(exceptions.InvalidStrategy):
+        single_route_backtest('Test39')
+
+
+def test_average_take_profit_and_average_stop_loss():
+    single_route_backtest('Test36')
+
+    assert len(store.closed_trades.trades) == 2
+
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    assert t1.type == 'long'
+    assert t1.entry_price == 1
+    assert t1.exit_price == 3.5
+    assert t1.qty == 2
+
+    t2: ClosedTrade = store.closed_trades.trades[1]
+    assert t2.type == 'short'
+    assert t2.entry_price == 11
+    assert t2.exit_price == 13.5
+    assert t2.qty == 2
+
+
+def test_average_take_profit_exception():
+    with pytest.raises(exceptions.InvalidStrategy):
+        single_route_backtest('Test38')
+
+
+def test_average_entry_price_property():
+    single_route_backtest('TestAverageEntryPriceProperty')
+
+
+def test_has_long_entry_orders_property():
+    single_route_backtest('TestHasLongEntryOrdersProperty')
+
+
+def test_has_short_entry_orders_property():
+    single_route_backtest('TestHasShortEntryOrdersProperty')
+
+
+def test_has_long_entry_orders_property_in_filters():
+    single_route_backtest('TestHasLongAndShortEntryOrdersPropertiesInFilters')
+
+
+def test_can_close_a_long_position_and_go_short_at_the_same_candle():
+    single_route_backtest('Test45', is_futures_trading=True, leverage_mode='isolated')
+
+    trades = store.closed_trades.trades
+
+    assert len(trades) == 2
+    # the position should no longer stay open because it gets liquidated eventually
+    assert store.app.total_open_trades == 0
+    assert store.app.total_liquidations == 1
+
+
+def test_fee_rate_property():
+    single_route_backtest('Test48')
+
+
+def test_filter_readable_exception():
+    with pytest.raises(Exception) as err:
+        single_route_backtest('Test47')
+
+    assert str(err.value).startswith("Invalid filter format")
+
+
+def test_filters():
+    single_route_backtest('Test37')
+
+    assert len(store.closed_trades.trades) == 0
+
+
+def test_forming_candles():
+    reset_config()
+    routes = [
+        {'symbol': 'BTC-USDT', 'timeframe': timeframes.MINUTE_5, 'strategy': 'Test19'}
+    ] 
+    data_routes = [
+        {'symbol': 'BTC-USDT', 'timeframe': timeframes.MINUTE_15}
+    ]
+
+    candles = {}
+    key = jh.key(exchanges.SANDBOX, 'BTC-USDT')
+    candles[key] = {
+        'exchange': exchanges.SANDBOX,
+        'symbol': 'BTC-USDT',
+        'candles': test_candles_0
+    }
+
+    backtest_mode.run('000', False, {}, exchanges.SANDBOX, routes, data_routes, '2019-04-01', '2019-04-02', candles)
+
+    # Every nonempty clock bucket is represented, including the final forming bucket.
+    timestamps = test_candles_0[:, 0].astype(np.int64)
+    assert len(candle_service.get_candles(exchanges.SANDBOX, 'BTC-USDT', timeframes.MINUTE_5)) == len(
+        np.unique(timestamps // 300_000)
+    )
+    assert len(candle_service.get_candles(exchanges.SANDBOX, 'BTC-USDT', timeframes.MINUTE_15)) == len(
+        np.unique(timestamps // 900_000)
+    )
+
+
+@pytest.mark.parametrize('fast_mode', [False, True], ids=['step', 'fast'])
+def test_sparse_timestamp_routes_are_clock_aligned_and_atomic(fast_mode: bool):
+    set_up()
+    start = 1_704_067_200_000
+    # Minutes 02 through 11 are absent, leaving the entire 00:05 bucket empty.
+    observed_minutes = [0, 1, 12, 14]
+    candles_array = np.array([
+        [start + minute * 60_000, 10 + minute, 11 + minute, 12 + minute, 9 + minute, 1 + minute]
+        for minute in observed_minutes
+    ], dtype=np.float64)
+    candles = {
+        jh.key(exchanges.SANDBOX, 'BTC-USDT'): {
+            'exchange': exchanges.SANDBOX,
+            'symbol': 'BTC-USDT',
+            'candles': candles_array,
+        }
+    }
+    routes = [
+        {'symbol': 'BTC-USDT', 'timeframe': '5m', 'strategy': 'TestSparseTimestampRoutes'},
+    ]
+    data_routes = [
+        {'symbol': 'BTC-USDT', 'timeframe': '15m'},
+    ]
+
+    backtest_mode.run(
+        '000', False, {}, exchanges.SANDBOX, routes, data_routes,
+        '2019-04-01', '2019-04-02', candles, fast_mode=fast_mode,
+    )
+
+
+@pytest.mark.parametrize('fast_mode', [False, True], ids=['step', 'fast'])
+def test_thirteen_missing_minutes_preserve_nonempty_clock_buckets(fast_mode: bool):
+    set_up()
+    start = 1_704_067_200_000
+    # Minutes 01 through 13 are absent, spanning the rest of 00:00, all of
+    # 00:05, and most of 00:10 without manufacturing any source observations.
+    candles_array = np.array([
+        [start, 10, 11, 12, 9, 1],
+        [start + 14 * 60_000, 24, 25, 26, 23, 15],
+    ], dtype=np.float64)
+    candles = {
+        jh.key(exchanges.SANDBOX, 'BTC-USDT'): {
+            'exchange': exchanges.SANDBOX,
+            'symbol': 'BTC-USDT',
+            'candles': candles_array,
+        },
+    }
+    routes = [
+        {'symbol': 'BTC-USDT', 'timeframe': '5m', 'strategy': 'TestLongSparseGap'},
+    ]
+
+    backtest_mode.run(
+        '000', False, {}, exchanges.SANDBOX, routes, [],
+        '2019-04-01', '2019-04-02', candles, fast_mode=fast_mode,
+    )
+
+
+@pytest.mark.parametrize('reverse_order', [False, True], ids=['forward', 'reversed'])
+def test_multi_instrument_replay_uses_union_events_and_ignores_stale_orders(reverse_order: bool):
+    set_up()
+    start = 1_704_067_200_000
+    btc = np.array([
+        [start + minute * 60_000, 10 + minute, 10 + minute, 10 + minute, 10 + minute, 1]
+        for minute in [0, 1, 2, 3]
+    ], dtype=np.float64)
+    eth = np.array([
+        [start + minute * 60_000, 100 + minute, 100 + minute, 100 + minute, 100 + minute, 1]
+        for minute in [0, 2, 3]
+    ], dtype=np.float64)
+    routes = [
+        {'symbol': 'BTC-USDT', 'timeframe': '1m', 'strategy': 'TestMultiInstrumentReplayA'},
+        {'symbol': 'ETH-USDT', 'timeframe': '1m', 'strategy': 'TestMultiInstrumentReplayB'},
+    ]
+    candle_items = [
+        (jh.key(exchanges.SANDBOX, 'BTC-USDT'), {
+            'exchange': exchanges.SANDBOX, 'symbol': 'BTC-USDT', 'candles': btc,
+        }),
+        (jh.key(exchanges.SANDBOX, 'ETH-USDT'), {
+            'exchange': exchanges.SANDBOX, 'symbol': 'ETH-USDT', 'candles': eth,
+        }),
+    ]
+    if reverse_order:
+        routes.reverse()
+        candle_items.reverse()
+
+    backtest_mode.run(
+        '000', False, {}, exchanges.SANDBOX, routes, [],
+        '2019-04-01', '2019-04-02', dict(candle_items),
+    )
+
+
+def test_multi_instrument_replay_rejects_streams_without_a_shared_trading_period():
+    set_up()
+    start = 1_704_067_200_000
+    routes = [
+        {'symbol': 'BTC-USDT', 'timeframe': '1m', 'strategy': 'TestEmptyStrategy'},
+        {'symbol': 'ETH-USDT', 'timeframe': '1m', 'strategy': 'TestEmptyStrategy'},
+    ]
+    candles = {
+        jh.key(exchanges.SANDBOX, 'BTC-USDT'): {
+            'exchange': exchanges.SANDBOX,
+            'symbol': 'BTC-USDT',
+            'candles': np.array([[start, 10, 10, 10, 10, 1]], dtype=np.float64),
+        },
+        jh.key(exchanges.SANDBOX, 'ETH-USDT'): {
+            'exchange': exchanges.SANDBOX,
+            'symbol': 'ETH-USDT',
+            'candles': np.array([[start + 120_000, 20, 20, 20, 20, 1]], dtype=np.float64),
+        },
+    }
+
+    with pytest.raises(exceptions.CandlesNotFound, match='No trading candle remains for BTC-USDT'):
+        backtest_mode.run(
+            '000', False, {}, exchanges.SANDBOX, routes, [],
+            '2019-04-01', '2019-04-02', candles,
+        )
+
+
+def test_research_uses_one_warmup_safe_start_for_trading_and_data_routes():
+    start = 1_704_067_200_000
+    exchange = 'Warmup Exchange'
+
+    def _candles(symbol: str, first_minute: int) -> dict:
+        # BTC omits one interior minute from each trading 5m bucket. ETH stays
+        # contiguous so both routes still share the real 5m closing events.
+        missing_minutes = {32, 37} if symbol == 'BTC-USDT' else set()
+        rows = np.array([
+            [start + minute * 60_000, 100 + minute, 100 + minute, 101 + minute, 99 + minute, 1]
+            for minute in range(first_minute, 41)
+            if minute not in missing_minutes
+        ], dtype=np.float64)
+        return {'exchange': exchange, 'symbol': symbol, 'candles': rows}
+
+    config_input = {
+        'starting_balance': 10_000,
+        'fee': 0,
+        'type': 'futures',
+        'futures_leverage': 1,
+        'futures_leverage_mode': 'cross',
+        'exchange': exchange,
+        'warm_up_candles': 2,
+    }
+    routes = [
+        {'exchange': exchange, 'symbol': 'BTC-USDT', 'timeframe': '5m', 'strategy': 'TestCommonWarmupStart'},
+        {'exchange': exchange, 'symbol': 'ETH-USDT', 'timeframe': '5m', 'strategy': 'TestCommonWarmupStart'},
+    ]
+    data_routes = [
+        {'exchange': exchange, 'symbol': 'BTC-USDT', 'timeframe': '15m'},
+    ]
+    candles = {
+        jh.key(exchange, 'BTC-USDT'): _candles('BTC-USDT', 0),
+        jh.key(exchange, 'ETH-USDT'): _candles('ETH-USDT', 5),
+    }
+
+    research.backtest(config_input, routes, data_routes, candles)
+
+
+def test_increasing_long_position_size_after_opening():
+    single_route_backtest('Test16')
+
+    assert len(store.closed_trades.trades) == 1
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    assert t1.type == 'long'
+    assert t1.entry_price == (7 + 10) / 2
+    assert t1.exit_price == 15
+    assert t1.qty == 2
+    assert t1.fee == 0
+
+
+def test_increasing_short_position_size_after_opening():
+    single_route_backtest('TestIncreasingShortPosition', trend='down')
+
+
+def test_is_smart_enough_to_open_positions_via_market_orders():
+    set_up()
+
+    routes = [
+        {'symbol': 'ETH-USDT', 'timeframe': timeframes.MINUTE_1, 'strategy': 'Test05'}
+    ]
+
+    candles = {}
+    key = jh.key(exchanges.SANDBOX, 'ETH-USDT')
+    candles[key] = {
+        'exchange': exchanges.SANDBOX,
+        'symbol': 'ETH-USDT',
+        'candles': test_candles_1
+    }
+
+    # run backtest (dates are fake just to pass)
+    backtest_mode.run('000', False, {}, exchanges.SANDBOX, routes, [], '2019-04-01', '2019-04-02', candles)
+
+    assert len(store.closed_trades.trades) == 2
+
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    assert t1.type == 'long'
+    assert t1.entry_price == 129.23
+    assert t1.exit_price == 128.35
+    assert t1.qty == 10.204
+    assert t1.fee == 0
+    assert t1.opened_at == 1547201100000 + 60000
+    assert t1.closed_at == 1547202840000 + 60000
+    assert t1.orders[0].type == order_types.MARKET
+
+    t2: ClosedTrade = store.closed_trades.trades[1]
+    assert t2.type == 'short'
+    assert t2.entry_price == 128.01
+    assert t2.exit_price == 126.58
+    assert t2.qty == 10
+    assert t2.fee == 0
+    assert t2.opened_at == 1547203560000 + 60000
+    assert t2.closed_at == 1547203740000 + 60000
+    assert t2.orders[0].type == order_types.MARKET
+
+
+def test_is_smart_enough_to_open_positions_via_stop_orders():
+    set_up()
+
+    routes = [
+        {'symbol': 'ETH-USDT', 'timeframe': timeframes.MINUTE_5, 'strategy': 'Test06'}
+    ]
+
+    candles = {}
+    key = jh.key(exchanges.SANDBOX, 'ETH-USDT')
+    candles[key] = {
+        'exchange': exchanges.SANDBOX,
+        'symbol': 'ETH-USDT',
+        'candles': test_candles_1
+    }
+
+    # run backtest (dates are fake just to pass)
+    backtest_mode.run('000', False, {}, exchanges.SANDBOX, routes, [], '2019-04-01', '2019-04-02', candles)
+    assert len(store.closed_trades.trades) == 2
+
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    assert t1.type == 'long'
+    assert t1.entry_price == 129.33
+    assert t1.exit_price == 128.35
+    assert t1.qty == 10.204
+    assert t1.fee == 0
+    assert t1.opened_at == 1547201100000 + 60000
+    assert t1.closed_at == 1547202840000 + 60000
+    assert t1.orders[0].type == order_types.STOP
+
+    t2: ClosedTrade = store.closed_trades.trades[1]
+    assert t2.type == 'short'
+    assert t2.entry_price == 128.05
+    assert t2.exit_price == 126.58
+    assert t2.qty == 10
+    assert t2.fee == 0
+    assert t2.opened_at == 1547203560000 + 60000
+    assert t2.closed_at == 1547203740000 + 60000
+    assert t2.orders[0].type == order_types.STOP
+
+
+def test_liquidate():
+    single_route_backtest('Test31')
+
+    assert len(store.closed_trades.trades) == 2
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    t2: ClosedTrade = store.closed_trades.trades[1]
+
+    assert t1.type == 'long'
+    assert t1.entry_price == 1
+    assert t1.exit_price == 11
+
+    assert t2.type == 'short'
+    assert t2.entry_price == 21
+    assert t2.exit_price == 41
+
+
+def test_modifying_stop_loss_after_part_of_position_is_already_reduced_with_stop_loss():
+    set_up()
+
+    routes = [
+        {'symbol': 'BTC-USDT', 'timeframe': timeframes.MINUTE_1, 'strategy': 'Test14'}
+    ]
+
+    generated_candles = candles_from_close_prices(
+        list(range(1, 10)) + list(range(10, 1, -1))
+    )
+
+    candles = {}
+    key = jh.key(exchanges.SANDBOX, 'BTC-USDT')
+    candles[key] = {
+        'exchange': exchanges.SANDBOX,
+        'symbol': 'BTC-USDT',
+        'candles': generated_candles
+    }
+
+    backtest_mode.run('000', False, {}, exchanges.SANDBOX, routes, [], '2019-04-01', '2019-04-02', candles)
+
+    assert len(store.closed_trades.trades) == 1
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    assert t1.type == 'long'
+    assert t1.entry_price == 7
+    assert t1.exit_price == (4 * 2 + 6) / 3
+    assert t1.qty == 1.5
+    assert t1.fee == 0
+
+
+def test_modifying_take_profit_after_opening_position():
+    single_route_backtest('Test12')
+
+    assert len(store.closed_trades.trades) == 1
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    assert t1.type == 'long'
+    assert t1.entry_price == 7
+    assert t1.exit_price == 16
+    assert t1.qty == 1.5
+    assert t1.fee == 0
+
+
+def test_modifying_take_profit_after_part_of_position_is_already_reduced_with_profit():
+    single_route_backtest('Test13')
+
+    assert len(store.closed_trades.trades) == 1
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    assert t1.type == 'long'
+    assert t1.entry_price == 7
+    assert t1.exit_price == (16 * 2 + 11) / 3
+    assert t1.qty == 1.5
+    assert t1.fee == 0
+
+
+def test_must_not_be_able_to_set_two_similar_routes():
+    reset_config()
+    r = [
+        {'exchange': exchanges.SANDBOX, 'symbol': 'ETH-USDT', 'timeframe': timeframes.MINUTE_5, 'strategy': 'Test01'},
+        {'exchange': exchanges.SANDBOX, 'symbol': 'ETH-USDT', 'timeframe': timeframes.MINUTE_30, 'strategy': 'Test02'},
+    ]
+    store.reset()
+    
+    with pytest.raises(Exception) as err:
+        router.initiate(r)
+    assert str(
+        err.value).startswith('each exchange-symbol pair can be traded only once')
+
+
+def test_on_reduced_position():
+    single_route_backtest('Test18')
+
+    assert len(store.closed_trades.trades) == 1
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    assert t1.type == 'long'
+    assert t1.entry_price == 7
+    assert t1.exit_price == 13
+    assert t1.qty == 2
+    assert t1.fee == 0
+
+
+def test_on_route_canceled():
+    two_routes_backtest('Test27', 'Test28')
+
+    t1 = store.closed_trades.trades[0]
+
+    assert t1.symbol == 'BTC-USDT'
+    assert t1.type == 'long'
+    assert t1.entry_price == 101
+    assert t1.exit_price == 120
+    assert t1.qty == 1
+
+
+def test_on_route_increased_position_and_on_route_reduced_position_and_strategy_vars():
+    two_routes_backtest('Test29', 'Test30')
+
+    # long BTC-USD
+    t1 = store.closed_trades.trades[0]
+    # short BTC-USD
+    t2 = store.closed_trades.trades[1]
+    # long ETH-USD
+    t3 = store.closed_trades.trades[2]
+
+    assert t1.symbol == 'BTC-USDT'
+    assert t1.type == 'long'
+    assert t1.entry_price == 121
+    assert t1.exit_price == 131
+    assert t1.qty == 1
+
+    assert t2.symbol == 'BTC-USDT'
+    assert t2.type == 'short'
+    assert t2.entry_price == 151
+    assert t2.exit_price == 161
+    assert t2.qty == 1
+
+    assert t3.symbol == 'ETH-USDT'
+    assert t3.type == 'long'
+    # because we open at 10, and increase at 20, entry is the mean which is 15
+    assert t3.entry_price == 15
+    # (50 + 70) / 2
+    assert t3.exit_price == 60
+    assert t3.qty == 2
+
+
+def test_on_route_open_position():
+    two_routes_backtest('Test21', 'Test22')
+
+    t1 = store.closed_trades.trades[0]
+    t2 = store.closed_trades.trades[1]
+
+    assert t1.symbol == 'BTC-USDT'
+    assert t1.type == 'long'
+    assert t1.entry_price == 101
+    assert t1.exit_price == 110
+    assert t1.qty == 1
+
+    assert t2.symbol == 'ETH-USDT'
+    assert t2.type == 'long'
+    assert t2.entry_price == 10
+    assert t2.exit_price == 20
+    assert t2.qty == 1
+
+
+def test_on_route_open_position_like_the_example_on_the_docs():
+    two_routes_backtest('TestOnRouteOpenPosition', 'TestOnRouteOpenPosition2')
+
+
+def test_on_route_stop_loss():
+    two_routes_backtest('Test25', 'Test26')
+
+    t1 = store.closed_trades.trades[0]
+    t2 = store.closed_trades.trades[1]
+
+    assert t2.symbol == 'BTC-USDT'
+    assert t2.type == 'long'
+    assert t2.entry_price == 101
+    assert t2.exit_price == 120
+    assert t2.qty == 1
+
+    assert t1.symbol == 'ETH-USDT'
+    assert t1.type == 'short'
+    assert t1.entry_price == 10
+    assert t1.exit_price == 20
+    assert t1.qty == 1
+
+
+def test_on_route_take_profit():
+    two_routes_backtest('Test23', 'Test24')
+
+    t1 = store.closed_trades.trades[0]
+    t2 = store.closed_trades.trades[1]
+
+    assert t2.symbol == 'BTC-USDT'
+    assert t2.type == 'long'
+    assert t2.entry_price == 101
+    assert t2.exit_price == 120
+    assert t2.qty == 1
+
+    assert t1.symbol == 'ETH-USDT'
+    assert t1.type == 'long'
+    assert t1.entry_price == 10
+    assert t1.exit_price == 20
+    assert t1.qty == 1
+
+
+def test_opening_position_in_multiple_points():
+    single_route_backtest('Test15')
+
+    assert len(store.closed_trades.trades) == 1
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    assert t1.type == 'long'
+    assert t1.entry_price == (7 + 9 + 11) / 3
+    assert t1.exit_price == 15
+    assert t1.qty == 1.5
+    assert t1.fee == 0
+
+
+def test_reducing_position_size_after_opening():
+    single_route_backtest('Test17')
+
+    assert len(store.closed_trades.trades) == 1
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    assert t1.type == 'long'
+    assert t1.entry_price == 7
+    assert t1.exit_price == (15 + 10) / 2
+    assert t1.qty == 2
+    assert t1.fee == 0
+
+
+def test_shared_vars():
+    two_routes_backtest('Test32', 'Test33')
+
+    t1 = store.closed_trades.trades[0]
+
+    assert t1.symbol == 'ETH-USDT'
+    assert t1.type == 'long'
+    assert t1.entry_price == 11
+    assert t1.exit_price == 21
+    assert t1.qty == 1
+
+
+def test_should_buy_and_execute_buy():
+    set_up()
+
+    routes = [
+        {'symbol': 'ETH-USDT', 'timeframe': timeframes.MINUTE_5, 'strategy': 'Test01'},
+    ]
+
+    candles = {}
+    for r in routes:
+        key = jh.key(exchanges.SANDBOX, r['symbol'])
+        candles[key] = {
+            'exchange': exchanges.SANDBOX,
+            'symbol': r['symbol'],
+            'candles': range_candles((5 * 3) * 20)
+        }
+
+    # run backtest (dates are fake just to pass)
+    backtest_mode.run('000', False, {}, exchanges.SANDBOX, routes, [], '2019-04-01', '2019-04-02', candles)
+
+    for r in router.routes:
+        s: Strategy = r.strategy
+        p = s.position
+
+        assert p.is_close is True
+        assert len(s.trades[0].orders) == 2
+        o: Order = s.trades[0].orders[0]
+        short_candles = candle_service.get_candles(r.exchange, r.symbol, '1m')
+        assert o.price == short_candles[4][2]
+        assert o.price == s.candles[0][2]
+        assert o.created_at == short_candles[4][0] + 60_000
+        assert o.is_executed is True
+        assert s.trade is None
+        trade: ClosedTrade = store.closed_trades.trades[0]
+        assert trade.type == 'long'
+        # must include executed orders, in this case it's entry and take_profit
+        assert len(trade.orders) == 2
+        assert trade.orders[0].side == 'buy'
+        assert trade.orders[0].type == 'MARKET'
+        assert trade.orders[1].side == 'sell'
+        assert trade.orders[1].type == 'LIMIT'
+        assert len(store.closed_trades.trades) == 1
+
+
+def test_should_sell_and_execute_sell():
+    set_up()
+
+    routes = [
+        {'symbol': 'ETH-USDT', 'timeframe': timeframes.MINUTE_5, 'strategy': 'Test02'},
+    ]
+
+    candles = {}
+    for r in routes:
+        key = jh.key(exchanges.SANDBOX, r['symbol'])
+        candles[key] = {
+            'exchange': exchanges.SANDBOX,
+            'symbol': r['symbol'],
+            'candles': range_candles((5 * 3) * 20)
+        }
+
+    # run backtest (dates are fake just to pass)
+    backtest_mode.run('000', False, {}, exchanges.SANDBOX, routes, [], '2019-04-01', '2019-04-02', candles)
+
+    for r in router.routes:
+        s: Strategy = r.strategy
+        p = s.position
+
+        assert p.is_close is True
+        orders = s.trades[-1].orders
+        assert len(orders) == 2
+        o: Order = orders[0]
+        short_candles = candle_service.get_candles(r.exchange, r.symbol, '1m')
+        assert o.price == short_candles[4][2]
+        assert o.price == s.candles[0][2]
+        assert o.created_at == short_candles[4][0] + 60_000
+        assert o.is_executed is True
+        assert s.trade is None
+        assert len(store.closed_trades.trades) == 1
+        assert store.closed_trades.trades[0].type == 'short'
+
+
+def test_stop_loss_at_multiple_points():
+    single_route_backtest('Test11')
+
+    assert len(store.closed_trades.trades) == 1
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    assert t1.type == 'short'
+    assert t1.entry_price == 3
+    assert t1.exit_price == (6 + 5 + 4) / 3
+    assert t1.qty == 1.5
+    assert t1.fee == 0
+
+
+def test_strategy_properties():
+    two_routes_backtest('Test19', 'Test19')
+
+    for r in router.routes:
+        s: Strategy = r.strategy
+
+        assert s.name == r.strategy_name
+        assert s.symbol == r.symbol
+        assert s.exchange == r.exchange
+        assert s.timeframe == r.timeframe
+        assert s.trade is None
+        assert s._is_executing is False
+        assert s._is_initiated is True
+        np.testing.assert_equal(s.current_candle, candle_service.get_current_candle(r.exchange, r.symbol, r.timeframe))
+        np.testing.assert_equal(s.candles, candle_service.get_candles(r.exchange, r.symbol, r.timeframe))
+        assert s.position == store.positions.get_position(r.exchange, r.symbol)
+        assert s.orders == store.orders.get_orders(r.exchange, r.symbol)
+
+
+def test_taking_profit_at_multiple_points():
+    single_route_backtest('Test10')
+
+    assert len(store.closed_trades.trades) == 1
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    assert t1.type == 'long'
+    assert t1.entry_price == 7
+    assert t1.exit_price == (15 + 13 + 11) / 3
+    assert t1.qty == 1.5
+    assert t1.fee == 0
+    assert t1.holding_period == 8 * 60
+
+
+def test_terminate_closes_trades_at_the_end_of_backtest():
+    single_route_backtest('Test40')
+
+    # assert that Strategy's _terminate() method closes the open position (without defining `terminate()`)
+    assert store.app.total_open_trades == 1
+    assert store.app.total_open_pl == 97
+
+
+def test_updating_stop_loss_and_take_profit_after_opening_the_position():
+    set_up()
+
+    routes = [
+        {'symbol': 'ETH-USDT', 'timeframe': timeframes.MINUTE_1, 'strategy': 'Test07'}
+    ]
+
+    candles = {}
+    key = jh.key(exchanges.SANDBOX, 'ETH-USDT')
+    candles[key] = {
+        'exchange': exchanges.SANDBOX,
+        'symbol': 'ETH-USDT',
+        'candles': test_candles_1
+    }
+
+    # run backtest (dates are fake just to pass)
+    backtest_mode.run('000', False, {}, exchanges.SANDBOX, routes, [], '2019-04-01', '2019-04-02', candles)
+
+    t1: ClosedTrade = store.closed_trades.trades[0]
+    assert t1.type == 'long'
+    assert t1.entry_price == 129.23
+    assert t1.exit_price == 128.98
+    assert t1.qty == 10.204
+    assert t1.fee == 0
+    assert t1.opened_at == 1547201100000 + 60000
+    assert t1.closed_at == 1547201700000 + 60000
+    assert t1.orders[0].type == order_types.MARKET
+
+    t2: ClosedTrade = store.closed_trades.trades[1]
+    assert t2.type == 'short'
+    assert t2.entry_price == 128.01
+    assert t2.exit_price == 127.66
+    assert t2.qty == 10
+    assert t2.fee == 0
+    assert t2.opened_at == 1547203560000 + 60000
+    assert t2.closed_at == 1547203680000 + 60000
+    assert t2.orders[0].type == order_types.MARKET
+
+
+def test_validation_for_equal_stop_loss_and_take_profit():
+    with pytest.raises(Exception) as err:
+        single_route_backtest('Test46')
+
+    assert str(err.value).startswith('stop-loss and take-profit should not be exactly the same')
+
+
+def test_increased_and_reduced_count():
+    single_route_backtest('TestIncreasedAndReducedCount')
+
+
+def test_before():
+    single_route_backtest('TestBeforeMethod')
+
+
+def test_after():
+    single_route_backtest('TestAfterMethod')
+
+
+def test_leverage_property():
+    single_route_backtest('TestLeverageProperty1', is_futures_trading=False)
+
+    single_route_backtest('TestLeverageProperty1', is_futures_trading=True, leverage=1)
+
+    single_route_backtest('TestLeverageProperty2', is_futures_trading=True, leverage=2)
+
+
+def test_reduce_only_market_orders():
+    single_route_backtest('TestReduceOnlyMarketOrders', is_futures_trading=True, leverage=1)
+
+
+def test_oversized_reduce_only_exit_accounting():
+    single_route_backtest('TestOversizedReduceOnlyExitAccounting', trend='down', fee=0.001)
+
+
+def test_liquidation_in_isolated_mode_for_short_trades():
+    single_route_backtest(
+        'TestLiquidationInIsolatedModeForShortTrade', is_futures_trading=True, leverage=2,
+        leverage_mode='isolated'
+    )
+
+
+def test_liquidation_in_isolated_mode_for_long_trades():
+    single_route_backtest(
+        'TestLiquidationInIsolatedModeForLongTrade', is_futures_trading=True, leverage=2,
+        leverage_mode='isolated', trend='down'
+    )
+
+
+def test_mark_price():
+    single_route_backtest(
+        'TestMarkPrice', is_futures_trading=True,
+    )
+
+
+def test_log_method():
+    single_route_backtest('TestLogMethodInStrategyClass')
+
+    assert store.logs.info[1]['message'] == 'test info log'
+    assert store.logs.errors[0]['message'] == 'test error log'
+
+
+def test_using_market_order_for_low_price_difference():
+    single_route_backtest('TestMarketOrderForLowPriceDifference')
+
+
+def test_dna_method():
+    single_route_backtest('TestDnaMethod')
+
+
+def test_default_hyperparameters():
+    single_route_backtest('TestDefaultHyperparameters')
+
+
+def test_positions():
+    set_up()
+
+    routes = [
+        {'symbol': 'ETH-USDT', 'timeframe': '5m', 'strategy': 'TestPositions'},
+        {'symbol': 'BTC-USDT', 'timeframe': '5m', 'strategy': 'TestPositions'},
+    ]
+
+    candles = {}
+    for r in routes:
+        key = jh.key(exchanges.SANDBOX, r['symbol'])
+        candles[key] = {
+            'exchange': exchanges.SANDBOX,
+            'symbol': r['symbol'],
+            'candles': range_candles((5 * 3) * 20)
+        }
+    # run backtest (dates are fake just to pass)
+    backtest_mode.run('000', False, {}, exchanges.SANDBOX, routes, [], '2019-04-01', '2019-04-02', candles)
+
+    # assertions done in the TestPositions
+
+
+def test_portfolio_value():
+    set_up(leverage=2)
+
+    routes = [
+        {'symbol': 'ETH-USDT', 'timeframe': '5m', 'strategy': 'TestPortfolioValue'},
+        {'symbol': 'BTC-USDT', 'timeframe': '5m', 'strategy': 'TestPortfolioValue'},
+    ]
+
+    candles = {}
+    for r in routes:
+        key = jh.key(exchanges.SANDBOX, r['symbol'])
+        candles[key] = {
+            'exchange': exchanges.SANDBOX,
+            'symbol': r['symbol'],
+            'candles': range_candles((5 * 3) * 20)
+        }
+    # run backtest (dates are fake just to pass)
+    backtest_mode.run('000', False, {}, exchanges.SANDBOX, routes, [], '2019-04-01', '2019-04-02', candles)
+
+    # assertions done in the TestPortfolioValue
+
+
+def test_portfolio_value_includes_position_value_and_open_orders_value():
+    # in futures mode
+    single_route_backtest(
+        'TestPortfolioValueIncludesPositionValueAndOpenOrdersValue',
+        is_futures_trading=True,
+    )
+    # in the spot mode
+    single_route_backtest(
+        'TestPortfolioValueIncludesPositionValueAndOpenOrdersValue',
+        is_futures_trading=False,
+    )
+
+
+def test_multiple_entry_orders_update_entry_long():
+    single_route_backtest('TestMultipleEntryOrdersUpdateEntryLongPositions')
+
+
+def test_multiple_entry_orders_update_entry_short():
+    single_route_backtest('TestMultipleEntryOrdersUpdateEntryShortPositions')
+
+
+def test_can_cancel_entry_orders_after_open_position():
+    # long position - setting to []
+    single_route_backtest('TestCanCancelEntryOrdersAfterOpenPositionLong1')
+    # long position - setting to None
+    single_route_backtest('TestCanCancelEntryOrdersAfterOpenPositionLong2')
+
+    # short position - setting to []
+    single_route_backtest('TestCanCancelEntryOrdersAfterOpenPositionShort1')
+    # short position - setting to None
+    single_route_backtest('TestCanCancelEntryOrdersAfterOpenPositionShort2')
+
+
+def test_stop_loss_price_is_replaced_with_market_order():
+    # long position
+    single_route_backtest('TestStopLossPriceIsReplacedWithMarketOrderForBetterPriceLongPosition')
+    # short position
+    single_route_backtest('TestStopLossPriceIsReplacedWithMarketOrderForBetterPriceShortPosition')
+
+
+def test_take_profit_price_is_replaced_with_market_order():
+    # long position
+    single_route_backtest('TestTakeProfitPriceIsReplacedWithMarketOrderWhenMoreConvenientLongPosition')
+    # short position
+    single_route_backtest('TestTakeProfitPriceIsReplacedWithMarketOrderWhenMoreConvenientShortPosition')
+
+
+def test_can_run_without_shorting():
+    single_route_backtest('TestCanRunWithoutShorting')
+
+
+def test_entry_orders_and_exit_orders_properties():
+    single_route_backtest('TestEntryOrdersAndExitOrdersProperties')
+
+
+def test_exchange_type_property():
+    # spot
+    single_route_backtest('TestExchangeTypeProperty1', is_futures_trading=False)
+    # futures
+    single_route_backtest('TestExchangeTypeProperty2', is_futures_trading=True)
+
+
+def test_on_cancel_method():
+    single_route_backtest('TestOnCancelMethod')
+
+
+def test_order_price_cannot_be_greater_than_zero():
+    with pytest.raises(exceptions.InvalidStrategy):
+        single_route_backtest('TestOrderPriceCannotBeGreaterThanZero')
+
+
+def test_daily_balances_property():
+    single_route_backtest('TestDailyBalancesProperty', candles_count=10*1440)
+
+
+def test_capital_property_raises_not_implemented_error():
+    with pytest.raises(NotImplementedError):
+        single_route_backtest('TestCapitalPropertyRaisesNotImplementedError')
+
+
+def test_strategy_variables_are_reset_before_opening_new_position():
+    single_route_backtest(
+        'TestStrategyVariablesAreResetBeforeOpeningNewPosition',
+        is_futures_trading=False
+    )
+
+
+def test_can_open_a_new_position_immediately_after_closing_via_update_position():
+    single_route_backtest('TestCanOpenANewPositionImmediatelyAfterClosingViaUpdatePosition')
+
+
+def test_before_terminate1():
+    single_route_backtest('TestBeforeTerminate')
+
+
+def test_before_terminate2():
+    """
+    test that user can use terminate() method. in this unit test use it
+    to close the open position.
+    `"""
+    single_route_backtest('Test41')
+
+    # TODO
+    # assert terminate() is actually executed by logging a
+    # string init, and then checking for that log message
+    # assert {'id': 2, 'message': 'executed terminate successfully', 'time': 1552315246171.0} in store.logs.info
+
+    # assert inside strategies terminate() that we have indeed an open position
+
+    # assert that Strategy's terminate() method closes the open position
+    assert store.app.total_open_trades == 0
+    assert store.app.total_open_pl == 0
+
+
+def test_terminate():
+    single_route_backtest('TestTerminate')
+
+    from jesse.store import store
+    assert store.app.starting_time == 1
+
+
+def test_chart_values():
+    with pytest.raises(ValueError):
+        single_route_backtest('TestAddHorizontalLineToCandleChart')
+
+    with pytest.raises(ValueError):
+        single_route_backtest('TestAddLineToCandleChart')
+
+    with pytest.raises(ValueError):
+        single_route_backtest('TestAddHorizontalLineToExtraChart')
+
+    with pytest.raises(ValueError):
+        single_route_backtest('TestAddLineToExtraChart')
+
+
+def test_invalid_chart_values_are_logged_once_until_recovery(monkeypatch):
+    import jesse.services.logger as logger
+
+    single_route_backtest('TestStrategyChartsReport')
+    strategy = router.routes[0].strategy
+    errors = []
+
+    def capture_error(message, send_notification=True):
+        errors.append((message, send_notification))
+
+    monkeypatch.setattr(logger, 'error', capture_error)
+
+    strategy.add_line_to_candle_chart('warming-up', math.nan, 'yellow')
+    strategy.add_line_to_candle_chart('warming-up', math.nan, 'yellow')
+
+    assert len(errors) == 1
+    assert errors[0] == (
+        'Invalid chart value in strategy "TestStrategyChartsReport" for candle chart line "warming-up": nan. '
+        'Chart values must be finite numbers. The dashboard will skip this value.',
+        False,
+    )
+    assert math.isnan(strategy._add_line_to_candle_chart_values['warming-up']['data'][-1]['value'])
+
+    strategy.add_line_to_candle_chart('warming-up', 1.0, 'yellow')
+    strategy.add_line_to_candle_chart('warming-up', math.nan, 'yellow')
+
+    assert len(errors) == 2
+
+
+def test_every_chart_method_logs_non_finite_values(monkeypatch):
+    import jesse.services.logger as logger
+
+    single_route_backtest('TestStrategyChartsReport')
+    strategy = router.routes[0].strategy
+    errors = []
+    monkeypatch.setattr(
+        logger,
+        'error',
+        lambda message, send_notification=True: errors.append((message, send_notification)),
+    )
+
+    strategy.add_line_to_candle_chart('ema', math.nan)
+    strategy.add_horizontal_line_to_candle_chart('support', math.inf)
+    strategy.add_extra_line_chart('ADX', 'adx14', -math.inf)
+    strategy.add_horizontal_line_to_extra_chart('ADX', 'threshold', math.nan)
+
+    assert len(errors) == 4
+    assert all(send_notification is False for _, send_notification in errors)
+    messages = [message for message, _ in errors]
+    assert any('candle chart line "ema": nan' in message for message in messages)
+    assert any('candle chart horizontal line "support": inf' in message for message in messages)
+    assert any('extra chart "ADX" line "adx14": -inf' in message for message in messages)
+    assert any('extra chart "ADX" horizontal line "threshold": nan' in message for message in messages)
+
+
+def test_strategy_charts_report():
+    # the live dashboard serves the strategy-drawn chart data through
+    # report.strategy_charts() (full snapshot) and strategy_charts_updates()
+    # (last point per line, published on every dashboard tick)
+    single_route_backtest('TestStrategyChartsReport')
+
+    from jesse.services import report
+
+    key = jh.key(exchanges.SANDBOX, 'BTC-USDT', timeframes.MINUTE_1)
+
+    snapshot = report.strategy_charts()
+    assert set(snapshot.keys()) == {key}
+    charts = snapshot[key]
+    assert charts['lines']['ema']['color'] == 'blue'
+    assert len(charts['lines']['ema']['data']) > 1
+    assert charts['horizontal_lines']['level']['price'] == 10.0
+    assert charts['extra_charts']['RSI']['rsi']['data'][-1]['value'] == 50.0
+    assert charts['horizontal_extra_lines']['RSI']['oversold']['price'] == 30.0
+
+    updates = report.strategy_charts_updates()
+    last_point = charts['lines']['ema']['data'][-1]
+    assert updates[key]['lines']['ema'] == last_point
+    assert updates[key]['extra_charts']['RSI']['rsi'] == charts['extra_charts']['RSI']['rsi']['data'][-1]
+    assert updates[key]['horizontal_lines'] == charts['horizontal_lines']
+    assert updates[key]['horizontal_extra_lines'] == charts['horizontal_extra_lines']
+
+
+def test_live_chart_line_data_is_capped(monkeypatch):
+    # live sessions never end, so chart-line arrays must not grow unbounded;
+    # backtests keep their full history
+    from jesse.strategies.Strategy import LIVE_CHART_MAX_POINTS_PER_LINE
+
+    assert LIVE_CHART_MAX_POINTS_PER_LINE == 1_000
+
+    single_route_backtest('TestStrategyChartsReport')
+    strategy = router.routes[0].strategy
+
+    data = [{'time': i, 'value': i} for i in range(LIVE_CHART_MAX_POINTS_PER_LINE + 5)]
+
+    # backtesting: untouched
+    strategy._trim_chart_line_data(data)
+    assert len(data) == LIVE_CHART_MAX_POINTS_PER_LINE + 5
+
+    # live: capped, dropping the oldest points
+    monkeypatch.setattr(jh, 'is_live', lambda: True)
+    strategy._trim_chart_line_data(data)
+    assert len(data) == LIVE_CHART_MAX_POINTS_PER_LINE
+    assert data[0]['time'] == 5
+    assert data[-1]['time'] == LIVE_CHART_MAX_POINTS_PER_LINE + 4
+
+
+def test_live_chart_add_methods_keep_the_latest_points(monkeypatch):
+    from jesse.strategies.Strategy import LIVE_CHART_MAX_POINTS_PER_LINE
+
+    single_route_backtest('TestStrategyChartsReport')
+    strategy = router.routes[0].strategy
+    monkeypatch.setattr(jh, 'is_live', lambda: True)
+
+    candle_data = [
+        {'time': i, 'value': float(i), 'color': 'blue'}
+        for i in range(LIVE_CHART_MAX_POINTS_PER_LINE)
+    ]
+    strategy._add_line_to_candle_chart_values['capped'] = {
+        'data': candle_data,
+        'color': 'blue',
+    }
+    strategy.add_line_to_candle_chart('capped', 123.0, 'blue')
+
+    assert len(candle_data) == LIVE_CHART_MAX_POINTS_PER_LINE
+    assert candle_data[0]['time'] == 1
+    assert candle_data[-1]['value'] == 123.0
+
+    strategy.add_line_to_candle_chart('capped', 456.0, 'purple')
+    assert len(candle_data) == LIVE_CHART_MAX_POINTS_PER_LINE
+    assert candle_data[-1]['value'] == 456.0
+    assert candle_data[-1]['color'] == 'purple'
+
+    extra_data = [
+        {'time': i, 'value': float(i), 'color': 'orange'}
+        for i in range(LIVE_CHART_MAX_POINTS_PER_LINE)
+    ]
+    strategy._add_extra_line_chart_values['ADX'] = {
+        'capped': {'data': extra_data, 'color': 'orange'}
+    }
+    strategy.add_extra_line_chart('ADX', 'capped', 45.0, 'orange')
+
+    assert len(extra_data) == LIVE_CHART_MAX_POINTS_PER_LINE
+    assert extra_data[0]['time'] == 1
+    assert extra_data[-1]['value'] == 45.0
+
+    strategy.add_extra_line_chart('ADX', 'capped', 50.0, 'blue')
+    assert len(extra_data) == LIVE_CHART_MAX_POINTS_PER_LINE
+    assert extra_data[-1]['value'] == 50.0
+    assert extra_data[-1]['color'] == 'blue'
+
+
+def test_intrabar_chart_update_is_guarded_and_recovers_after_errors(monkeypatch):
+    single_route_backtest('TestStrategyChartsReport')
+    strategy = router.routes[0].strategy
+    calls = []
+
+    def update_chart():
+        calls.append('updated')
+        strategy._update_chart()
+
+    monkeypatch.setattr(strategy, 'update_chart', update_chart)
+    strategy._update_chart()
+
+    assert calls == ['updated']
+    assert strategy._is_updating_chart is False
+
+    def fail():
+        raise ValueError('invalid chart value')
+
+    monkeypatch.setattr(strategy, 'update_chart', fail)
+    with pytest.raises(ValueError, match='invalid chart value'):
+        strategy._update_chart()
+
+    assert strategy._is_updating_chart is False
+
+
+def test_intrabar_chart_update_replaces_the_forming_candle_value(monkeypatch):
+    single_route_backtest('TestStrategyChartsReport')
+    strategy = router.routes[0].strategy
+    monkeypatch.setattr(jh, 'is_live', lambda: True)
+
+    strategy._update_chart()
+    line_data = strategy._add_line_to_candle_chart_values['ema']['data']
+    original_length = len(line_data)
+    original_time = line_data[-1]['time']
+    original_value = line_data[-1]['value']
+
+    candles = store.candles.get_storage(strategy.exchange, strategy.symbol, strategy.timeframe)
+    candles.array[candles.index, 2] = original_value + 10
+    strategy._update_chart()
+
+    assert len(line_data) == original_length
+    assert line_data[-1]['time'] == original_time
+    assert line_data[-1]['value'] == original_value + 10
+
+
+def test_live_execution_leaves_chart_updates_to_the_intrabar_scheduler(monkeypatch):
+    single_route_backtest('TestStrategyChartsReport')
+    strategy = router.routes[0].strategy
+    calls = []
+    monkeypatch.setattr(jh, 'is_live', lambda: True)
+    monkeypatch.setattr(strategy, 'update_chart', lambda: calls.append('updated'))
+
+    strategy._execute()
+    assert calls == []
+
+    strategy._update_chart()
+    assert calls == ['updated']
+
+
+def test_without_cancel_method():
+    single_route_backtest('TestWithoutCancelMethod')
+
+
+def test_proper_balance_handling_in_spot_after_order_cancellation():
+    single_route_backtest('TestProperBalanceHanldingInSpotAfterOrderCancellation', is_futures_trading=False, trend='down')
+
+
+def test_current_route_index():
+    two_routes_backtest('TestCurrentRouteIndex1', 'TestCurrentRouteIndex2')
+
+
+def test_data_routes():
+    two_data_routes_backtest('TestDataRoutes1', 'TestDataRoutes2')
+
+
+def test_on_close_position():
+    single_route_backtest('TestOnClosePosition')
+
+
+def test_base_and_quote_asset_properties():
+    single_route_backtest('TestBaseAndQuoteAssetProperties')
+
+
+def test_trading_hours_gate_filter_and_cancel_policy():
+    single_route_backtest('TestTradingHours')
+
+
+def test_trading_hours_gate_judges_the_candle_that_just_closed():
+    # 15m route, 1m candles from Fri 2026-03-06 00:00 UTC through Wed 2026-03-11 23:59 UTC,
+    # spanning the US DST switch; the edge assertions live in the strategy
+    set_up()
+    start = 1772755200000  # 2026-03-06T00:00:00Z
+    count = 6 * 1440
+    prices = np.full(count, 100.0)
+    candles = np.zeros((count, 6))
+    candles[:, 0] = start + np.arange(count) * 60_000
+    candles[:, 1:5] = prices[:, None]
+    candles[:, 5] = 1
+    routes = [{'symbol': 'BTC-USDT', 'timeframe': timeframes.MINUTE_15, 'strategy': 'TestTradingHoursCandleEdges'}]
+    backtest_mode.run(
+        '000', False, {}, exchanges.SANDBOX, routes, [], '2026-03-06', '2026-03-12',
+        {jh.key(exchanges.SANDBOX, 'BTC-USDT'): {
+            'exchange': exchanges.SANDBOX, 'symbol': 'BTC-USDT', 'candles': candles,
+        }},
+    )

@@ -1,0 +1,3125 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OctoBot protocol types",
+    "description": "",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "WorkflowStatus": {
+        "description": "WorkflowStatus",
+        "type": "string",
+        "enum": [
+          "pending",
+          "scheduled",
+          "periodic",
+          "running",
+          "completed",
+          "canceled",
+          "failed"
+        ]
+      },
+      "Side": {
+        "description": "Order execution side.",
+        "type": "string",
+        "enum": [
+          "buy",
+          "sell"
+        ]
+      },
+      "OrderType": {
+        "description": "Exchange order type.",
+        "type": "string",
+        "enum": [
+          "limit",
+          "market",
+          "stop_loss",
+          "stop_loss_limit",
+          "take_profit",
+          "take_profit_limit"
+        ]
+      },
+      "OrderStatus": {
+        "description": "Lifecycle state of an order.",
+        "type": "string",
+        "enum": [
+          "pending_creation",
+          "open",
+          "partially_filled",
+          "filled",
+          "canceled",
+          "canceling",
+          "closed",
+          "expired",
+          "rejected",
+          "unknown"
+        ]
+      },
+      "TrailingProfileType": {
+        "description": "Trailing profile discriminator (mirrors octobot_trading TrailingProfileTypes values).",
+        "type": "string",
+        "enum": [
+          "filled_take_profit"
+        ]
+      },
+      "CancelPolicyType": {
+        "description": "Cancel policy class name (mirrors octobot_trading cancel_policy_factory).",
+        "type": "string",
+        "enum": [
+          "ExpirationTimeOrderCancelPolicy",
+          "ChainedOrderFillingPriceOrderCancelPolicy"
+        ]
+      },
+      "ActiveOrderSwapStrategyType": {
+        "description": "Active order swap strategy class name (mirrors octobot_trading active_order_swap_strategy_factory).",
+        "type": "string",
+        "enum": [
+          "StopFirstActiveOrderSwapStrategy",
+          "TakeProfitFirstActiveOrderSwapStrategy"
+        ]
+      },
+      "OrderGroupType": {
+        "description": "Order group class name (mirrors persisted OrderGroup.__name__ in octobot_trading).",
+        "type": "string",
+        "enum": [
+          "BalancedTakeProfitAndStopOrderGroup",
+          "TrailingOnFilledTPBalancedOrderGroup",
+          "OneCancelsTheOtherOrderGroup"
+        ]
+      },
+      "TrailingProfile": {
+        "description": "TrailingProfile",
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/TrailingProfileType"
+          },
+          "specifics": {
+            "type": "object"
+          }
+        }
+      },
+      "CancelPolicy": {
+        "description": "CancelPolicy",
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/CancelPolicyType"
+          },
+          "specifics": {
+            "type": "object"
+          }
+        }
+      },
+      "ActiveOrderSwapStrategy": {
+        "description": "ActiveOrderSwapStrategy",
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/ActiveOrderSwapStrategyType"
+          },
+          "trigger_price_configuration": {
+            "type": "object"
+          },
+          "timeout": {
+            "type": "number"
+          }
+        }
+      },
+      "OrderGroup": {
+        "description": "OrderGroup",
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/OrderGroupType"
+          },
+          "active_order_swap_strategy": {
+            "$ref": "#/components/schemas/ActiveOrderSwapStrategy"
+          }
+        }
+      },
+      "OrderSummary": {
+        "description": "OrderSummary",
+        "type": "object",
+        "required": [
+          "id",
+          "symbol"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          }
+        }
+      },
+      "PositionStatus": {
+        "description": "PositionStatus",
+        "type": "string",
+        "enum": [
+          "open",
+          "liquidated",
+          "liquidating",
+          "auto_deleveraging"
+        ]
+      },
+      "Order": {
+        "description": "Order",
+        "type": "object",
+        "required": [
+          "id",
+          "symbol",
+          "price",
+          "quantity",
+          "filled",
+          "exchange_id",
+          "side",
+          "type",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "filled": {
+            "type": "number"
+          },
+          "exchange_id": {
+            "type": "string"
+          },
+          "side": {
+            "$ref": "#/components/schemas/Side"
+          },
+          "type": {
+            "$ref": "#/components/schemas/OrderType"
+          },
+          "trigger_above": {
+            "type": "boolean"
+          },
+          "reduce_only": {
+            "type": "boolean"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "update_with_triggering_order_fees": {
+            "type": "boolean"
+          },
+          "order_group": {
+            "$ref": "#/components/schemas/OrderGroup"
+          },
+          "trailing_profile": {
+            "$ref": "#/components/schemas/TrailingProfile"
+          },
+          "cancel_policy": {
+            "$ref": "#/components/schemas/CancelPolicy"
+          },
+          "chained_orders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          }
+        }
+      },
+      "TradeSummary": {
+        "description": "TradeSummary",
+        "type": "object",
+        "required": [
+          "id",
+          "symbol"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          }
+        }
+      },
+      "Fee": {
+        "description": "TradeFee",
+        "type": "object",
+        "required": [
+          "amount",
+          "currency"
+        ],
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          }
+        }
+      },
+      "Trade": {
+        "description": "Trade",
+        "type": "object",
+        "required": [
+          "id",
+          "trade_id",
+          "type",
+          "symbol",
+          "side",
+          "quantity",
+          "price",
+          "status",
+          "executed_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "trade_id": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/OrderType"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "side": {
+            "$ref": "#/components/schemas/Side"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "price": {
+            "type": "number"
+          },
+          "fee": {
+            "$ref": "#/components/schemas/Fee"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "executed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Position": {
+        "description": "Position",
+        "type": "object",
+        "required": [
+          "id",
+          "symbol",
+          "side",
+          "quantity",
+          "entry_price",
+          "mark_price",
+          "liquidation_price",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "side": {
+            "$ref": "#/components/schemas/Side"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "entry_price": {
+            "type": "number"
+          },
+          "mark_price": {
+            "type": "number"
+          },
+          "liquidation_price": {
+            "type": "number"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PositionStatus"
+          }
+        }
+      },
+      "PositionSummary": {
+        "description": "PositionSummary",
+        "type": "object",
+        "required": [
+          "id",
+          "symbol"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          }
+        }
+      },
+      "Action": {
+        "description": "Action",
+        "type": "object",
+        "required": [
+          "id",
+          "action_type",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "action_type": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkflowStatus"
+          },
+          "dsl": {
+            "type": "string"
+          },
+          "configuration": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "result": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DetailedAsset": {
+        "description": "DetailedAsset",
+        "type": "object",
+        "required": [
+          "symbol",
+          "total",
+          "available"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "total": {
+            "type": "number"
+          },
+          "available": {
+            "type": "number"
+          }
+        }
+      },
+      "DetailedAssetsForTradingType": {
+        "description": "DetailedAssetsForTradingType",
+        "type": "object",
+        "required": [
+          "trading_type",
+          "assets"
+        ],
+        "properties": {
+          "trading_type": {
+            "$ref": "#/components/schemas/TradingType"
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DetailedAsset"
+            }
+          }
+        }
+      },
+      "CopiedAsset": {
+        "description": "CopiedAsset",
+        "type": "object",
+        "required": [
+          "name",
+          "total",
+          "available",
+          "ratio"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "total": {
+            "type": "number"
+          },
+          "available": {
+            "type": "number"
+          },
+          "ratio": {
+            "type": "number"
+          }
+        }
+      },
+      "AutomationMetadata": {
+        "description": "AutomationMetadata",
+        "type": "object",
+        "required": [
+          "name",
+          "description"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ChildOctoBotProcessState": {
+        "description": "ChildOctoBotProcessState",
+        "type": "object",
+        "required": [
+          "http_base_url",
+          "web_port",
+          "init_state_ok"
+        ],
+        "properties": {
+          "http_base_url": {
+            "type": "string"
+          },
+          "web_port": {
+            "type": "integer"
+          },
+          "init_state_ok": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AutomationState": {
+        "description": "AutomationState",
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "metadata"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkflowStatus"
+          },
+          "error": {
+            "type": "string"
+          },
+          "error_message": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/AutomationMetadata"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            }
+          },
+          "priority_actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            }
+          },
+          "exchanges": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exchange_account_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DetailedAssetsForTradingType"
+            }
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderSummary"
+            }
+          },
+          "trades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TradeSummary"
+            }
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PositionSummary"
+            }
+          },
+          "child_octobot_process": {
+            "$ref": "#/components/schemas/ChildOctoBotProcessState"
+          }
+        }
+      },
+      "AccountType": {
+        "description": "Account category discriminator.",
+        "type": "string",
+        "enum": [
+          "generic",
+          "exchange",
+          "blockchain",
+          "broker",
+          "bank",
+          "asset"
+        ]
+      },
+      "TradingType": {
+        "description": "TradingType",
+        "type": "string",
+        "enum": [
+          "spot",
+          "futures",
+          "options",
+          "margin"
+        ]
+      },
+      "ExchangeSupportStatus": {
+        "description": "ExchangeSupportStatus",
+        "type": "string",
+        "enum": [
+          "officially_supported",
+          "partially_tested",
+          "untested"
+        ]
+      },
+      "HistoricalAssetValue": {
+        "description": "HistoricalAssetValue",
+        "type": "object",
+        "required": [
+          "symbol",
+          "holdings",
+          "value"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "holdings": {
+            "type": "number"
+          },
+          "value": {
+            "type": "number"
+          }
+        }
+      },
+      "HistoricalAssetsForTradingType": {
+        "description": "HistoricalAssetsForTradingType",
+        "type": "object",
+        "required": [
+          "trading_type",
+          "assets"
+        ],
+        "properties": {
+          "trading_type": {
+            "$ref": "#/components/schemas/TradingType"
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistoricalAssetValue"
+            }
+          }
+        }
+      },
+      "PortfolioHistoricalValue": {
+        "description": "PortfolioHistoricalValue",
+        "type": "object",
+        "required": [
+          "timestamp",
+          "total"
+        ],
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "total": {
+            "type": "number"
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistoricalAssetsForTradingType"
+            }
+          }
+        }
+      },
+      "PortfolioHistoricalValues": {
+        "description": "PortfolioHistoricalValues",
+        "type": "object",
+        "required": [
+          "values",
+          "unit"
+        ],
+        "properties": {
+          "unit": {
+            "type": "string"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHistoricalValue"
+            }
+          }
+        }
+      },
+      "NodeEndpoint": {
+        "description": "A paired node's address triple. Deliberately structural: any host/port/secure works. Not a caller's own document type for a list of paired nodes.",
+        "type": "object",
+        "required": [
+          "host",
+          "port"
+        ],
+        "properties": {
+          "host": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer"
+          },
+          "secure": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AccountAuthentication": {
+        "description": "AccountAuthentication",
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "api_key": {
+            "type": "string"
+          },
+          "api_secret": {
+            "type": "string"
+          },
+          "api_passphrase": {
+            "type": "string"
+          },
+          "public_key": {
+            "type": "string"
+          },
+          "private_key": {
+            "type": "string"
+          },
+          "seed_phrase": {
+            "type": "string"
+          }
+        }
+      },
+      "AccountTradingWithAccountId": {
+        "description": "AccountTradingWithAccountId",
+        "type": "object",
+        "required": [
+          "account_id"
+        ],
+        "properties": {
+          "account_id": {
+            "type": "string"
+          },
+          "account_trading": {
+            "$ref": "#/components/schemas/AccountTrading"
+          }
+        }
+      },
+      "Debug": {
+        "description": "Debug view of all automations and user actions",
+        "type": "object",
+        "required": [
+          "automations",
+          "user_actions"
+        ],
+        "properties": {
+          "automations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationState"
+            }
+          },
+          "user_actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserAction"
+            }
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Account"
+            }
+          },
+          "exchange_configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExchangeConfig"
+            }
+          },
+          "account_tradings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountTradingWithAccountId"
+            }
+          },
+          "local_strategies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Strategy"
+            }
+          }
+        }
+      },
+      "TransactionType": {
+        "description": "TransactionType",
+        "type": "string",
+        "enum": [
+          "blockchain_deposit",
+          "blockchain_withdrawal",
+          "funding_fee",
+          "trading_fee"
+        ]
+      },
+      "Transaction": {
+        "description": "Transaction",
+        "type": "object",
+        "required": [
+          "id",
+          "timestamp",
+          "asset",
+          "amount",
+          "type"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "asset": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransactionType"
+          }
+        }
+      },
+      "AccountTrading": {
+        "description": "AccountTrading",
+        "type": "object",
+        "required": [
+          "updated_at"
+        ],
+        "properties": {
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "trades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Trade"
+            }
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Position"
+            }
+          },
+          "transactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Transaction"
+            }
+          }
+        }
+      },
+      "ExchangeConfig": {
+        "description": "ExchangeConfig",
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "exchange",
+          "sandboxed"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "exchange": {
+            "type": "string"
+          },
+          "sandboxed": {
+            "type": "boolean",
+            "default": false
+          },
+          "url": {
+            "type": "string"
+          },
+          "historical_trade_symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ExchangeAccount": {
+        "description": "A centralized or DEX trading account, live-synced via a provider connection.",
+        "type": "object",
+        "required": [
+          "account_type",
+          "remote_account_id",
+          "exchange_config_ids"
+        ],
+        "properties": {
+          "account_type": {
+            "$ref": "#/components/schemas/AccountType",
+            "description": "exchange"
+          },
+          "remote_account_id": {
+            "type": "string"
+          },
+          "exchange_config_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "BlockchainAccount": {
+        "description": "A wallet address tracked read-only on-chain.",
+        "type": "object",
+        "required": [
+          "account_type",
+          "blockchain"
+        ],
+        "properties": {
+          "account_type": {
+            "$ref": "#/components/schemas/AccountType",
+            "description": "blockchain"
+          },
+          "blockchain": {
+            "type": "string"
+          },
+          "network": {
+            "type": "string"
+          },
+          "exchange_config_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "GenericAccount": {
+        "description": "A placeholder account created before its real kind is known (e.g. mid-onboarding), not a semantic category of its own.",
+        "type": "object",
+        "required": [
+          "account_type"
+        ],
+        "properties": {
+          "account_type": {
+            "$ref": "#/components/schemas/AccountType",
+            "description": "generic"
+          }
+        }
+      },
+      "BrokerAccount": {
+        "description": "A brokerage account for trading stocks, commodities, forex, and similar instruments (eToro-style platforms), which may be live-synced via a provider connection.",
+        "type": "object",
+        "required": [
+          "account_type"
+        ],
+        "properties": {
+          "account_type": {
+            "$ref": "#/components/schemas/AccountType",
+            "description": "broker"
+          },
+          "provider_id": {
+            "type": "string"
+          },
+          "exchange_config_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "BankAccount": {
+        "description": "A cash/deposit account, always manually entered, never live-synced.",
+        "type": "object",
+        "required": [
+          "account_type"
+        ],
+        "properties": {
+          "account_type": {
+            "$ref": "#/components/schemas/AccountType",
+            "description": "bank"
+          },
+          "institution": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          }
+        }
+      },
+      "AssetAccount": {
+        "description": "A manually-entered, single tracked non-liquid asset (a watch, a car, real estate, and similar).",
+        "type": "object",
+        "required": [
+          "account_type"
+        ],
+        "properties": {
+          "account_type": {
+            "$ref": "#/components/schemas/AccountType",
+            "description": "asset"
+          },
+          "asset_type": {
+            "type": "string"
+          },
+          "cost_basis": {
+            "type": "number"
+          }
+        }
+      },
+      "AccountStatus": {
+        "description": "AccountStatus",
+        "type": "string",
+        "enum": [
+          "valid",
+          "invalid",
+          "unknown"
+        ]
+      },
+      "AccountStatusMessage": {
+        "description": "AccountStatusMessage",
+        "type": "string",
+        "enum": [
+          "pending_validation",
+          "valid",
+          "invalid_api_keys",
+          "missing_api_trading_rights",
+          "revoke_api_withdrawal_rights",
+          "invalid_api_ip_whitelist",
+          "internal_server_error",
+          "account_too_old",
+          "incompatible_account_referral"
+        ]
+      },
+      "AccountPermission": {
+        "description": "AccountPermission",
+        "type": "string",
+        "enum": [
+          "read",
+          "spot_trading",
+          "futures_trading",
+          "withdraw",
+          "internal_transfer"
+        ]
+      },
+      "AccountState": {
+        "description": "AccountState",
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountPermission"
+            }
+          },
+          "status": {
+            "$ref": "#/components/schemas/AccountStatus"
+          },
+          "message": {
+            "$ref": "#/components/schemas/AccountStatusMessage"
+          }
+        }
+      },
+      "Account": {
+        "description": "Account",
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "is_simulated",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "is_simulated": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/AccountState"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "authentication_id": {
+            "type": "string",
+            "description": "The id of the account authentication bound to this account"
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DetailedAssetsForTradingType"
+            }
+          },
+          "specifics": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ExchangeAccount"
+              },
+              {
+                "$ref": "#/components/schemas/BlockchainAccount"
+              },
+              {
+                "$ref": "#/components/schemas/GenericAccount"
+              },
+              {
+                "$ref": "#/components/schemas/BrokerAccount"
+              },
+              {
+                "$ref": "#/components/schemas/BankAccount"
+              },
+              {
+                "$ref": "#/components/schemas/AssetAccount"
+              }
+            ],
+            "discriminator": {
+              "propertyName": "account_type",
+              "mapping": {
+                "exchange": "#/components/schemas/ExchangeAccount",
+                "blockchain": "#/components/schemas/BlockchainAccount",
+                "generic": "#/components/schemas/GenericAccount",
+                "broker": "#/components/schemas/BrokerAccount",
+                "bank": "#/components/schemas/BankAccount",
+                "asset": "#/components/schemas/AssetAccount"
+              }
+            }
+          }
+        }
+      },
+      "UserDataState": {
+        "description": "UserDataState",
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "automations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationState"
+            }
+          },
+          "user_actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserAction"
+            }
+          }
+        }
+      },
+      "AccountsState": {
+        "description": "AccountsState",
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Account"
+            }
+          },
+          "exchange_configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExchangeConfig"
+            }
+          }
+        }
+      },
+      "UserActionsState": {
+        "description": "UserActionsState",
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "user_actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserAction"
+            }
+          }
+        }
+      },
+      "CopiedAccount": {
+        "description": "CopiedAccount",
+        "type": "object",
+        "required": [
+          "version",
+          "updated_at",
+          "copied_assets"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "number"
+          },
+          "copied_assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CopiedAsset"
+            }
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Position"
+            }
+          },
+          "historical_snapshots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CopiedAccount"
+            }
+          }
+        }
+      },
+      "TimeFrame": {
+        "description": "TimeFrame",
+        "type": "string",
+        "enum": [
+          "1m",
+          "5m",
+          "15m",
+          "30m",
+          "1h",
+          "4h",
+          "6h",
+          "8h",
+          "12h",
+          "1d",
+          "3d",
+          "1w"
+        ]
+      },
+      "ActionConfigurationType": {
+        "description": "ActionConfigurationType",
+        "type": "string",
+        "enum": [
+          "market_making",
+          "trading_tentacles",
+          "copy",
+          "generic_process",
+          "generic_workflow",
+          "signal_bot"
+        ]
+      },
+      "MarketMakingReferencePair": {
+        "description": "Reference price source for market making (exchange pair, weighting, and optional formula).",
+        "type": "object",
+        "required": [
+          "exchange",
+          "pair"
+        ],
+        "properties": {
+          "exchange": {
+            "type": "string",
+            "description": "Exchange id, or a sentinel such as local exchange price when supported by the trading mode."
+          },
+          "pair": {
+            "type": "string",
+            "description": "Pair symbol (e.g. 'BTC/USDT' for a CEX or 'WETH/USDC@ETH-UNISWAP' for a DEX)."
+          },
+          "weight": {
+            "type": "number"
+          },
+          "formula": {
+            "type": "string",
+            "description": "Optional formula overriding the default latest price for this source."
+          },
+          "time_frame": {
+            "$ref": "#/components/schemas/TimeFrame"
+          }
+        }
+      },
+      "MarketMakingOrderBookDepth": {
+        "description": "Order book depth parameters (cumulated volume and daily volume fraction).",
+        "type": "object",
+        "required": [
+          "cumulated_volume_percent",
+          "percent_daily_trading_volume"
+        ],
+        "properties": {
+          "cumulated_volume_percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "percent_daily_trading_volume": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        }
+      },
+      "MarketMakingScheduledVolume": {
+        "description": "Scheduled volume order sizing and timing in quote currency.",
+        "type": "object",
+        "required": [
+          "min_amount",
+          "max_amount",
+          "min_interval_seconds",
+          "max_interval_seconds"
+        ],
+        "properties": {
+          "min_amount": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "max_amount": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "min_interval_seconds": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "max_interval_seconds": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          }
+        }
+      },
+      "MarketMakingStopConditions": {
+        "description": "Optional holdings and volatility thresholds used for automations / stop behavior.",
+        "type": "object",
+        "properties": {
+          "min_base_holding": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "min_quote_holding": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "max_positive_percent_price_change": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "max_negative_percent_price_change": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "average_price_counted_minutes": {
+            "type": "number",
+            "minimum": 1,
+            "default": 60,
+            "description": "Minutes window for average price when evaluating volatility stops."
+          }
+        }
+      },
+      "MarketMakingHedgingEngine": {
+        "description": "Optional cross-exchange hedging configuration.",
+        "type": "object",
+        "properties": {
+          "average_price_counted_minutes": {
+            "type": "number",
+            "minimum": 1,
+            "default": 60
+          },
+          "hedging_engine_type": {
+            "type": "string",
+            "enum": [
+              "spot",
+              "perpetual_futures"
+            ]
+          },
+          "hedging_exchange": {
+            "type": "string"
+          },
+          "hedging_max_loss_threshold": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "hedging_profit_threshold": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "max_negative_percent_price_change": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "max_positive_percent_price_change": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          }
+        }
+      },
+      "MarketMakingOrdersDistribution": {
+        "description": "How order prices are spaced across the book.",
+        "type": "string",
+        "enum": [
+          "linear"
+        ]
+      },
+      "MarketMakingFundsDistribution": {
+        "description": "How allocated funds are spread across ladder levels.",
+        "type": "string",
+        "enum": [
+          "flat",
+          "valley",
+          "random"
+        ]
+      },
+      "MarketMakingSymbolConfiguration": {
+        "description": "MarketMakingSymbolConfiguration",
+        "type": "object",
+        "required": [
+          "trading_pair",
+          "reference_price",
+          "min_spread",
+          "max_spread",
+          "bids_count",
+          "asks_count",
+          "orders_distribution",
+          "funds_distribution",
+          "exchange"
+        ],
+        "properties": {
+          "trading_pair": {
+            "type": "string"
+          },
+          "reference_price": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarketMakingReferencePair"
+            },
+            "minItems": 1
+          },
+          "min_spread": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Minimum spread as a percentage (e.g. 0.5 for 0.5%)."
+          },
+          "max_spread": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Maximum spread as a percentage."
+          },
+          "order_book_depth": {
+            "$ref": "#/components/schemas/MarketMakingOrderBookDepth"
+          },
+          "scheduled_volume": {
+            "$ref": "#/components/schemas/MarketMakingScheduledVolume"
+          },
+          "stop_conditions": {
+            "$ref": "#/components/schemas/MarketMakingStopConditions"
+          },
+          "bids_count": {
+            "type": "number",
+            "minimum": 1
+          },
+          "asks_count": {
+            "type": "number",
+            "minimum": 1
+          },
+          "orders_distribution": {
+            "$ref": "#/components/schemas/MarketMakingOrdersDistribution"
+          },
+          "funds_distribution": {
+            "$ref": "#/components/schemas/MarketMakingFundsDistribution"
+          },
+          "exchange": {
+            "type": "string"
+          },
+          "max_base_budget": {
+            "type": "number",
+            "minimum": 0,
+            "description": "0 means unlimited when supported."
+          },
+          "max_quote_budget": {
+            "type": "number",
+            "minimum": 0,
+            "description": "0 means unlimited when supported."
+          },
+          "min_base_budget": {
+            "type": "number",
+            "minimum": 0
+          },
+          "min_quote_budget": {
+            "type": "number",
+            "minimum": 0
+          },
+          "hedging_engine": {
+            "$ref": "#/components/schemas/MarketMakingHedgingEngine"
+          }
+        }
+      },
+      "MarketMakingConfiguration": {
+        "description": "Per-symbol market making parameters.",
+        "type": "object",
+        "required": [
+          "configuration_type",
+          "pair_settings"
+        ],
+        "properties": {
+          "configuration_type": {
+            "$ref": "#/components/schemas/ActionConfigurationType",
+            "description": "market_making"
+          },
+          "pair_settings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarketMakingSymbolConfiguration"
+            }
+          }
+        }
+      },
+      "EvaluatorConfiguration": {
+        "description": "EvaluatorConfiguration",
+        "type": "object",
+        "required": [
+          "name",
+          "config",
+          "symbols"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Evaluator tentacle class name, e.g. RSIMomentumEvaluator"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "include_in_construction_candle": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "StrategyEvaluatorConfiguration": {
+        "description": "StrategyEvaluatorConfiguration",
+        "type": "object",
+        "required": [
+          "name",
+          "config",
+          "time_frames"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Strategy evaluator tentacle class name, e.g. SimpleStrategyEvaluator"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "time_frames": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeFrame"
+            }
+          }
+        }
+      },
+      "TradingTentaclesConfiguration": {
+        "description": "TradingTentaclesConfiguration",
+        "type": "object",
+        "required": [
+          "configuration_type",
+          "name",
+          "config"
+        ],
+        "properties": {
+          "configuration_type": {
+            "$ref": "#/components/schemas/ActionConfigurationType",
+            "description": "trading_tentacles"
+          },
+          "name": {
+            "type": "string",
+            "description": "Trading mode tentacle class name, e.g. DCATradingMode, GridTradingMode"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "strategies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StrategyEvaluatorConfiguration"
+            }
+          },
+          "evaluators": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvaluatorConfiguration"
+            }
+          }
+        }
+      },
+      "CopyConfiguration": {
+        "description": "CopyConfiguration",
+        "type": "object",
+        "required": [
+          "configuration_type",
+          "strategy_id"
+        ],
+        "properties": {
+          "configuration_type": {
+            "$ref": "#/components/schemas/ActionConfigurationType",
+            "description": "copy"
+          },
+          "strategy_id": {
+            "type": "string"
+          }
+        }
+      },
+      "SignalBotConfiguration": {
+        "description": "SignalBotConfiguration",
+        "type": "object",
+        "required": [
+          "configuration_type"
+        ],
+        "properties": {
+          "configuration_type": {
+            "$ref": "#/components/schemas/ActionConfigurationType",
+            "description": "signal_bot"
+          },
+          "sync_interval_with_open_trades_seconds": {
+            "type": "number",
+            "description": "Periodic tick interval when the automation has open trades (open orders and/or open positions).",
+            "default": 3600
+          },
+          "sync_interval_without_open_trades_seconds": {
+            "type": "number",
+            "description": "Periodic tick interval when the automation is idle (no open trades).",
+            "default": 14400
+          }
+        }
+      },
+      "GenericProcessConfiguration": {
+        "description": "GenericProcessConfiguration",
+        "type": "object",
+        "required": [
+          "configuration_type"
+        ],
+        "properties": {
+          "configuration_type": {
+            "$ref": "#/components/schemas/ActionConfigurationType",
+            "description": "generic_process"
+          },
+          "profile_data": {
+            "type": "object"
+          }
+        }
+      },
+      "GenericWorkflowConfiguration": {
+        "description": "GenericWorkflowConfiguration",
+        "type": "object",
+        "required": [
+          "configuration_type",
+          "actions"
+        ],
+        "properties": {
+          "configuration_type": {
+            "$ref": "#/components/schemas/ActionConfigurationType",
+            "description": "generic_workflow"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            }
+          }
+        }
+      },
+      "StrategyReference": {
+        "description": "StrategyReference",
+        "type": "object",
+        "required": [
+          "id",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "emit_signals": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "AccountReference": {
+        "description": "AccountReference",
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "AutomationConfiguration": {
+        "description": "AutomationConfiguration",
+        "type": "object",
+        "required": [
+          "name",
+          "created_at",
+          "strategy",
+          "accounts"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/StrategyReference"
+          },
+          "accounts": {
+            "type": "array",
+            "description": "May be empty only for automations whose strategy configuration is generic_process; otherwise exactly one account reference is required at runtime.",
+            "items": {
+              "$ref": "#/components/schemas/AccountReference"
+            }
+          }
+        }
+      },
+      "CreateAutomationConfiguration": {
+        "description": "CreateAutomationConfiguration",
+        "type": "object",
+        "required": [
+          "configuration",
+          "action_type"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "automation_create"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/AutomationConfiguration"
+          }
+        }
+      },
+      "EditAutomationConfiguration": {
+        "description": "EditAutomationConfiguration",
+        "type": "object",
+        "required": [
+          "id",
+          "action_type",
+          "configuration"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "automation_edit"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/AutomationConfiguration"
+          }
+        }
+      },
+      "StopAutomationConfiguration": {
+        "description": "StopAutomationConfiguration",
+        "type": "object",
+        "required": [
+          "id",
+          "action_type"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "automation_stop"
+          },
+          "cancel_orders": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "RestartAutomationConfiguration": {
+        "description": "RestartAutomationConfiguration",
+        "type": "object",
+        "required": [
+          "id",
+          "action_type"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "automation_restart"
+          }
+        }
+      },
+      "AutomationSignalType": {
+        "description": "AutomationSignalType",
+        "type": "string",
+        "enum": [
+          "actions",
+          "trading_signal",
+          "forced_trigger"
+        ]
+      },
+      "SignalAutomationConfiguration": {
+        "description": "SignalAutomationConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "automation_id",
+          "signal_type"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "automation_signal"
+          },
+          "automation_id": {
+            "type": "string"
+          },
+          "signal_type": {
+            "$ref": "#/components/schemas/AutomationSignalType"
+          },
+          "signal_payload": {
+            "oneOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            ],
+            "description": "Optional payload associated with signal_type. Schema stays generic; see description for wire shapes. When signal_type is actions: a single action object, an array of action objects, or an object with an actions array. Each action object may use signal (param=val string, JSON signal string, or value resolved to DSL), a bare signal dict containing the flow signal key (e.g. SIGNAL), or dsl_script with id for direct DSL passthrough without resolution. Optional fields: id (default generated when using signal), await_execution_result (default true). signal is resolved to DSL; dsl_script is executed as-is. When signal_type is trading_signal: a trading-signal dict or one-element array. forced_trigger ignores payload."
+          }
+        }
+      },
+      "CreateAccountConfiguration": {
+        "description": "CreateAccountConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "configuration"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "account_create"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/Account"
+          }
+        }
+      },
+      "EditAccountConfiguration": {
+        "description": "EditAccountConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "id"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "account_edit"
+          },
+          "id": {
+            "type": "string"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/Account"
+          }
+        }
+      },
+      "DeleteAccountConfiguration": {
+        "description": "DeleteAccountConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "id"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "account_delete"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateHistoricalExchangesDataConfiguration": {
+        "description": "UpdateHistoricalExchangesDataConfiguration",
+        "type": "object",
+        "required": [
+          "action_type"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "update_historical_exchanges_data"
+          },
+          "account_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ResetAccountTradingDataConfiguration": {
+        "description": "ResetAccountTradingDataConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "account_ids"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "reset_account_trading_data"
+          },
+          "account_ids": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CreateExchangeConfigConfiguration": {
+        "description": "CreateExchangeConfigConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "configuration"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "exchange_config_create"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/ExchangeConfig"
+          }
+        }
+      },
+      "EditExchangeConfigConfiguration": {
+        "description": "EditExchangeConfigConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "id"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "exchange_config_edit"
+          },
+          "id": {
+            "type": "string"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/ExchangeConfig"
+          }
+        }
+      },
+      "DeleteExchangeConfigConfiguration": {
+        "description": "DeleteExchangeConfigConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "id"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "exchange_config_delete"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "RefreshAccountsConfiguration": {
+        "description": "RefreshAccountsConfiguration",
+        "type": "object",
+        "required": [
+          "action_type"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "accounts_refresh"
+          },
+          "account_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CreateStrategyConfiguration": {
+        "description": "CreateStrategyConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "configuration"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "strategy_create"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/Strategy"
+          }
+        }
+      },
+      "EditStrategyConfiguration": {
+        "description": "EditStrategyConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "id",
+          "configuration"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "strategy_edit"
+          },
+          "id": {
+            "type": "string"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/Strategy"
+          }
+        }
+      },
+      "DeleteStrategyConfiguration": {
+        "description": "DeleteStrategyConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "id"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "strategy_delete"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateAccountAuthConfiguration": {
+        "description": "CreateAccountAuthConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "configuration"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "account_auth_create"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/AccountAuthentication"
+          }
+        }
+      },
+      "EditAccountAuthConfiguration": {
+        "description": "EditAccountAuthConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "id",
+          "configuration"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "account_auth_edit"
+          },
+          "id": {
+            "type": "string"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/AccountAuthentication"
+          }
+        }
+      },
+      "DeleteAccountAuthConfiguration": {
+        "description": "DeleteAccountAuthConfiguration",
+        "type": "object",
+        "required": [
+          "action_type",
+          "id"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/UserActionType",
+            "description": "account_auth_delete"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "StrategyActionResultErrorMessage": {
+        "description": "StrategyActionResultErrorMessage",
+        "type": "string",
+        "enum": [
+          "strategy_not_found",
+          "invalid_configuration",
+          "duplicate_item",
+          "internal_error"
+        ]
+      },
+      "StrategyActionResult": {
+        "description": "StrategyActionResult",
+        "type": "object",
+        "required": [
+          "result_type",
+          "updated_at"
+        ],
+        "properties": {
+          "result_type": {
+            "$ref": "#/components/schemas/UserActionResultType",
+            "description": "strategy"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error_message": {
+            "$ref": "#/components/schemas/StrategyActionResultErrorMessage"
+          },
+          "error_details": {
+            "type": "string"
+          }
+        }
+      },
+      "UserActionType": {
+        "description": "UserActionType",
+        "type": "string",
+        "enum": [
+          "automation_create",
+          "automation_edit",
+          "automation_stop",
+          "automation_restart",
+          "automation_signal",
+          "account_create",
+          "account_edit",
+          "account_delete",
+          "accounts_refresh",
+          "exchange_config_create",
+          "exchange_config_edit",
+          "exchange_config_delete",
+          "update_historical_exchanges_data",
+          "reset_account_trading_data",
+          "strategy_create",
+          "strategy_edit",
+          "strategy_delete",
+          "account_auth_create",
+          "account_auth_edit",
+          "account_auth_delete"
+        ]
+      },
+      "UserActionStatus": {
+        "description": "UserActionStatus",
+        "type": "string",
+        "enum": [
+          "pending",
+          "running",
+          "completed",
+          "failed"
+        ]
+      },
+      "UserActionResultType": {
+        "description": "UserActionResultType",
+        "type": "string",
+        "enum": [
+          "automation",
+          "account",
+          "exchange_config",
+          "strategy",
+          "account_auth"
+        ]
+      },
+      "AutomationActionResultErrorMessage": {
+        "description": "AutomationActionResultErrorMessage",
+        "type": "string",
+        "enum": [
+          "automation_not_found",
+          "invalid_configuration",
+          "invalid_automation_id",
+          "strategy_not_found",
+          "strategy_version_not_found",
+          "unknown_trading_type",
+          "ambiguous_trading_type",
+          "ambiguous_exchange_config",
+          "account_not_found",
+          "account_authentication_details_not_found",
+          "internal_error",
+          "execution_timeout",
+          "execution_failed",
+          "not_enough_funds",
+          "order_not_found",
+          "invalid_order",
+          "authentication_error",
+          "missing_symbol",
+          "symbol_incompatible_with_account"
+        ]
+      },
+      "SignalPriorityActionExecutionResult": {
+        "description": "SignalPriorityActionExecutionResult",
+        "type": "object",
+        "required": [
+          "priority_action_id"
+        ],
+        "properties": {
+          "priority_action_id": {
+            "type": "string"
+          },
+          "error_status": {
+            "type": "string"
+          },
+          "error_message": {
+            "type": "string"
+          }
+        }
+      },
+      "AutomationActionResult": {
+        "description": "AutomationActionResult",
+        "type": "object",
+        "required": [
+          "updated_at",
+          "result_type"
+        ],
+        "properties": {
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error_message": {
+            "$ref": "#/components/schemas/AutomationActionResultErrorMessage"
+          },
+          "error_details": {
+            "type": "string"
+          },
+          "created_automation_id": {
+            "type": "string"
+          },
+          "result_type": {
+            "$ref": "#/components/schemas/UserActionResultType"
+          },
+          "signal_execution_results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SignalPriorityActionExecutionResult"
+            }
+          }
+        }
+      },
+      "AccountActionResultErrorMessage": {
+        "description": "AccountActionResultErrorMessage",
+        "type": "string",
+        "enum": [
+          "account_not_found",
+          "invalid_configuration",
+          "duplicate_item",
+          "account_authentication_details_not_found",
+          "internal_error"
+        ]
+      },
+      "AccountActionResult": {
+        "description": "AccountActionResult",
+        "type": "object",
+        "required": [
+          "updated_at",
+          "result_type"
+        ],
+        "properties": {
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error_message": {
+            "$ref": "#/components/schemas/AccountActionResultErrorMessage"
+          },
+          "error_details": {
+            "type": "string"
+          },
+          "result_type": {
+            "$ref": "#/components/schemas/UserActionResultType"
+          }
+        }
+      },
+      "ExchangeConfigActionResultErrorMessage": {
+        "description": "ExchangeConfigActionResultErrorMessage",
+        "type": "string",
+        "enum": [
+          "exchange_config_not_found",
+          "invalid_configuration",
+          "duplicate_item",
+          "internal_error"
+        ]
+      },
+      "ExchangeConfigActionResult": {
+        "description": "ExchangeConfigActionResult",
+        "type": "object",
+        "required": [
+          "updated_at",
+          "result_type"
+        ],
+        "properties": {
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error_message": {
+            "$ref": "#/components/schemas/ExchangeConfigActionResultErrorMessage"
+          },
+          "error_details": {
+            "type": "string"
+          },
+          "result_type": {
+            "$ref": "#/components/schemas/UserActionResultType"
+          }
+        }
+      },
+      "AccountAuthActionResultErrorMessage": {
+        "description": "AccountAuthActionResultErrorMessage",
+        "type": "string",
+        "enum": [
+          "account_auth_not_found",
+          "invalid_configuration",
+          "duplicate_item",
+          "internal_error"
+        ]
+      },
+      "AccountAuthActionResult": {
+        "description": "AccountAuthActionResult",
+        "type": "object",
+        "required": [
+          "updated_at",
+          "result_type"
+        ],
+        "properties": {
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error_message": {
+            "$ref": "#/components/schemas/AccountAuthActionResultErrorMessage"
+          },
+          "error_details": {
+            "type": "string"
+          },
+          "result_type": {
+            "$ref": "#/components/schemas/UserActionResultType",
+            "description": "account_auth"
+          }
+        }
+      },
+      "UserActionConfiguration": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CreateAutomationConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/EditAutomationConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/StopAutomationConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/RestartAutomationConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/SignalAutomationConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/CreateAccountConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/EditAccountConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/DeleteAccountConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/UpdateHistoricalExchangesDataConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/ResetAccountTradingDataConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/CreateExchangeConfigConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/EditExchangeConfigConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/DeleteExchangeConfigConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/RefreshAccountsConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/CreateStrategyConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/EditStrategyConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/DeleteStrategyConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/CreateAccountAuthConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/EditAccountAuthConfiguration"
+          },
+          {
+            "$ref": "#/components/schemas/DeleteAccountAuthConfiguration"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "action_type",
+          "mapping": {
+            "automation_create": "#/components/schemas/CreateAutomationConfiguration",
+            "automation_edit": "#/components/schemas/EditAutomationConfiguration",
+            "automation_stop": "#/components/schemas/StopAutomationConfiguration",
+            "automation_restart": "#/components/schemas/RestartAutomationConfiguration",
+            "automation_signal": "#/components/schemas/SignalAutomationConfiguration",
+            "account_create": "#/components/schemas/CreateAccountConfiguration",
+            "account_edit": "#/components/schemas/EditAccountConfiguration",
+            "account_delete": "#/components/schemas/DeleteAccountConfiguration",
+            "update_historical_exchanges_data": "#/components/schemas/UpdateHistoricalExchangesDataConfiguration",
+            "reset_account_trading_data": "#/components/schemas/ResetAccountTradingDataConfiguration",
+            "exchange_config_create": "#/components/schemas/CreateExchangeConfigConfiguration",
+            "exchange_config_edit": "#/components/schemas/EditExchangeConfigConfiguration",
+            "exchange_config_delete": "#/components/schemas/DeleteExchangeConfigConfiguration",
+            "accounts_refresh": "#/components/schemas/RefreshAccountsConfiguration",
+            "strategy_create": "#/components/schemas/CreateStrategyConfiguration",
+            "strategy_edit": "#/components/schemas/EditStrategyConfiguration",
+            "strategy_delete": "#/components/schemas/DeleteStrategyConfiguration",
+            "account_auth_create": "#/components/schemas/CreateAccountAuthConfiguration",
+            "account_auth_edit": "#/components/schemas/EditAccountAuthConfiguration",
+            "account_auth_delete": "#/components/schemas/DeleteAccountAuthConfiguration"
+          }
+        }
+      },
+      "UserAction": {
+        "description": "UserAction",
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/UserActionStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/UserActionConfiguration"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AutomationActionResult"
+              },
+              {
+                "$ref": "#/components/schemas/AccountActionResult"
+              },
+              {
+                "$ref": "#/components/schemas/ExchangeConfigActionResult"
+              },
+              {
+                "$ref": "#/components/schemas/StrategyActionResult"
+              },
+              {
+                "$ref": "#/components/schemas/AccountAuthActionResult"
+              }
+            ],
+            "discriminator": {
+              "propertyName": "result_type",
+              "mapping": {
+                "automation": "#/components/schemas/AutomationActionResult",
+                "account": "#/components/schemas/AccountActionResult",
+                "exchange_config": "#/components/schemas/ExchangeConfigActionResult",
+                "strategy": "#/components/schemas/StrategyActionResult",
+                "account_auth": "#/components/schemas/AccountAuthActionResult"
+              }
+            }
+          }
+        }
+      },
+      "Strategy": {
+        "description": "Strategy",
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "reference_market",
+          "configuration"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reference_market": {
+            "type": "string"
+          },
+          "configuration": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MarketMakingConfiguration"
+              },
+              {
+                "$ref": "#/components/schemas/TradingTentaclesConfiguration"
+              },
+              {
+                "$ref": "#/components/schemas/CopyConfiguration"
+              },
+              {
+                "$ref": "#/components/schemas/SignalBotConfiguration"
+              },
+              {
+                "$ref": "#/components/schemas/GenericProcessConfiguration"
+              },
+              {
+                "$ref": "#/components/schemas/GenericWorkflowConfiguration"
+              }
+            ],
+            "discriminator": {
+              "propertyName": "configuration_type",
+              "mapping": {
+                "market_making": "#/components/schemas/MarketMakingConfiguration",
+                "trading_tentacles": "#/components/schemas/TradingTentaclesConfiguration",
+                "copy": "#/components/schemas/CopyConfiguration",
+                "signal_bot": "#/components/schemas/SignalBotConfiguration",
+                "generic_process": "#/components/schemas/GenericProcessConfiguration",
+                "generic_workflow": "#/components/schemas/GenericWorkflowConfiguration"
+              }
+            }
+          }
+        }
+      },
+      "StrategiesState": {
+        "description": "StrategiesState",
+        "type": "object",
+        "required": [
+          "version",
+          "strategies"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "strategies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Strategy"
+            }
+          }
+        }
+      },
+      "AccountTradingState": {
+        "description": "AccountTradingState",
+        "type": "object",
+        "required": [
+          "version",
+          "account_trading"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "account_trading": {
+            "$ref": "#/components/schemas/AccountTrading"
+          }
+        }
+      },
+      "PortfolioHistoricalValuesState": {
+        "description": "PortfolioHistoricalValuesState",
+        "type": "object",
+        "required": [
+          "version",
+          "values"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "history": {
+            "$ref": "#/components/schemas/PortfolioHistoricalValues"
+          }
+        }
+      },
+      "AccountsAuthenticationState": {
+        "description": "AccountsAuthenticationState",
+        "type": "object",
+        "required": [
+          "version",
+          "account_authentication"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "account_authentication": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountAuthentication"
+            }
+          }
+        }
+      },
+      "DebugState": {
+        "description": "DebugState",
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "debug": {
+            "$ref": "#/components/schemas/Debug"
+          }
+        }
+      },
+      "DslKeywordCategory": {
+        "description": "Composition role of a DSL keyword.",
+        "type": "string",
+        "enum": [
+          "trigger",
+          "source",
+          "condition",
+          "logic",
+          "action"
+        ]
+      },
+      "DslValueType": {
+        "description": "Typed value carried by a DSL keyword parameter.",
+        "type": "string",
+        "enum": [
+          "number",
+          "text",
+          "series",
+          "signal",
+          "dict",
+          "boolean",
+          "order",
+          "time_frame",
+          "any"
+        ]
+      },
+      "DslParameterOption": {
+        "description": "Selectable value for a DSL parameter.",
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "DslParameter": {
+        "description": "Configurable parameter on a DSL keyword.",
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "value_type"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique within this keyword."
+          },
+          "label": {
+            "type": "string"
+          },
+          "value_type": {
+            "$ref": "#/components/schemas/DslValueType"
+          },
+          "description": {
+            "type": "string"
+          },
+          "default_value": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "description": "Must match parameter_type; for select/time_frame must be one of options[].value."
+          },
+          "minimum": {
+            "type": "number",
+            "description": "Only for parameter_type=number."
+          },
+          "maximum": {
+            "type": "number",
+            "description": "Only for parameter_type=number."
+          },
+          "step": {
+            "type": "number",
+            "description": "Only for parameter_type=number."
+          },
+          "options": {
+            "type": "array",
+            "description": "Allowed choices for value_type=text or value_type=time_frame.",
+            "items": {
+              "$ref": "#/components/schemas/DslParameterOption"
+            }
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "multiple": {
+            "type": "boolean",
+            "description": "Accepts more than one value of this parameter."
+          },
+          "primary": {
+            "type": "boolean",
+            "description": "Prefer in compact editors."
+          }
+        }
+      },
+      "DslKeyword": {
+        "description": "Definition of one DSL keyword (signature and configuration).",
+        "type": "object",
+        "required": [
+          "name",
+          "category",
+          "label",
+          "description",
+          "inputs",
+          "outputs"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable DSL keyword id."
+          },
+          "category": {
+            "$ref": "#/components/schemas/DslKeywordCategory"
+          },
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DslParameter"
+            }
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DslParameter"
+            }
+          }
+        }
+      },
+      "DslKeywordsState": {
+        "description": "Versioned list of DSL keywords available on a node.",
+        "type": "object",
+        "required": [
+          "version",
+          "keywords"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "keywords": {
+            "type": "array",
+            "description": "Available keywords in intended display order.",
+            "items": {
+              "$ref": "#/components/schemas/DslKeyword"
+            }
+          }
+        }
+      },
+      "TradedPairVolume": {
+        "description": "Optional 24h volume for a traded pair. Empty object when volume was not requested.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "baseVolume": {
+            "description": "24h base-currency volume.",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "quoteVolume": {
+            "description": "24h quote-currency volume.",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      },
+      "TradedPairsForExchange": {
+        "description": "Map of trading pair symbol to optional volume fields.",
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/components/schemas/TradedPairVolume"
+        }
+      },
+      "TradedPairsByExchange": {
+        "description": "Map of exchange internal name to traded pairs (and optional volumes).",
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/components/schemas/TradedPairsForExchange"
+        }
+      },
+      "ProposedActionEntry": {
+        "description": "One built-but-unsent action inside a proposal. after: 'previous-confirmed' marks an action that must not be appended until the prior entry in the array has been confirmed by the node (e.g. automation_create's strategy_create -> automation_create race). A privileged executor must honor this ordering; a read-only proposer never appends anything itself, so it just carries the constraint as data.",
+        "type": "object",
+        "required": [
+          "configuration"
+        ],
+        "properties": {
+          "configuration": {
+            "$ref": "#/components/schemas/UserActionConfiguration"
+          },
+          "after": {
+            "type": "string",
+            "enum": [
+              "previous-confirmed"
+            ]
+          }
+        }
+      },
+      "ActionProposal": {
+        "description": "A batch of built-but-unsent user actions, transported out-of-band (QR code, deep link, file) between a read-only-connected client and a privileged one. v is the envelope version: a client MUST reject an unrecognised v with a distinguishable error rather than treat it as a malformed scan.",
+        "type": "object",
+        "required": [
+          "v",
+          "kind",
+          "actions",
+          "createdAt"
+        ],
+        "properties": {
+          "v": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "octobot-action-proposal"
+            ]
+          },
+          "actions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/ProposedActionEntry"
+            }
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable summary for a confirm screen, when the generic per-action name/action_type derivation isn't enough."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ExchangeAvailability": {
+        "description": "ExchangeAvailability",
+        "type": "object",
+        "required": [
+          "internal_name",
+          "name",
+          "available_trading_types"
+        ],
+        "properties": {
+          "internal_name": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "logo": {
+            "type": "string"
+          },
+          "available_trading_types": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TradingType"
+            }
+          },
+          "support_type": {
+            "$ref": "#/components/schemas/ExchangeSupportStatus"
+          },
+          "sandboxable": {
+            "type": "boolean",
+            "default": false
+          },
+          "broker_enabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "register_url": {
+            "type": "string"
+          },
+          "api_url": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

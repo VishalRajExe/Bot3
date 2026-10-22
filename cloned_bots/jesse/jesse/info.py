@@ -1,0 +1,656 @@
+from jesse.enums import exchanges as exchanges_enums, timeframes
+from jesse.services.env import ENV_VALUES, is_dev_env
+
+
+if is_dev_env():
+    JESSE_API_URL = ENV_VALUES.get('JESSE_API_URL', 'http://localhost:8040/api')
+    JESSE_API2_URL = ENV_VALUES.get('JESSE_API2_URL', 'http://localhost:8080')
+    JESSE_WEBSITE_URL = ENV_VALUES.get('JESSE_WEBSITE_URL', 'http://localhost:8040')
+else:
+    JESSE_API_URL = 'https://api1.jesse.trade/api'
+    JESSE_API2_URL = 'https://api2.jesse.trade'
+    JESSE_WEBSITE_URL = 'https://jesse.trade'
+
+BYBIT_TIMEFRAMES = [timeframes.MINUTE_1, timeframes.MINUTE_3, timeframes.MINUTE_5, timeframes.MINUTE_15, timeframes.MINUTE_30,
+                    timeframes.HOUR_1, timeframes.HOUR_2, timeframes.HOUR_4, timeframes.HOUR_6, timeframes.HOUR_12, timeframes.DAY_1]
+BINANCE_TIMEFRAMES = [timeframes.MINUTE_1, timeframes.MINUTE_3, timeframes.MINUTE_5, timeframes.MINUTE_15, timeframes.MINUTE_30,
+                      timeframes.HOUR_1, timeframes.HOUR_2, timeframes.HOUR_4, timeframes.HOUR_6, timeframes.HOUR_8, timeframes.HOUR_12, timeframes.DAY_1]
+COINBASE_TIMEFRAMES = [timeframes.MINUTE_1, timeframes.MINUTE_5,
+                       timeframes.MINUTE_15, timeframes.HOUR_1, timeframes.HOUR_6, timeframes.DAY_1]
+APEX_OMNI_TIMEFRAMES = [timeframes.MINUTE_1, timeframes.MINUTE_5, timeframes.MINUTE_15,
+                       timeframes.MINUTE_30, timeframes.HOUR_1, timeframes.HOUR_2, timeframes.HOUR_4, timeframes.HOUR_6, timeframes.HOUR_12, timeframes.DAY_1]
+GATE_TIMEFRAMES = [timeframes.MINUTE_1, timeframes.MINUTE_5, timeframes.MINUTE_15,
+                   timeframes.MINUTE_30, timeframes.HOUR_1, timeframes.HOUR_2, timeframes.HOUR_4, timeframes.HOUR_6, timeframes.HOUR_8, timeframes.HOUR_12, timeframes.DAY_1, timeframes.WEEK_1]
+FTX_TIMEFRAMES = [timeframes.MINUTE_1, timeframes.MINUTE_3, timeframes.MINUTE_5, timeframes.MINUTE_15, timeframes.MINUTE_30,
+                  timeframes.HOUR_1, timeframes.HOUR_2, timeframes.HOUR_4, timeframes.HOUR_6, timeframes.HOUR_12, timeframes.DAY_1]
+BITGET_TIMEFRAMES = [timeframes.MINUTE_1, timeframes.MINUTE_5, timeframes.MINUTE_15,
+                     timeframes.MINUTE_30, timeframes.HOUR_1, timeframes.HOUR_4, timeframes.HOUR_12, timeframes.DAY_1]
+DYDX_TIMEFRAMES = [timeframes.MINUTE_1, timeframes.MINUTE_5, timeframes.MINUTE_15,
+                   timeframes.MINUTE_30, timeframes.HOUR_1, timeframes.HOUR_4, timeframes.DAY_1]
+HYPERLIQUID_TIMEFRAMES = [timeframes.MINUTE_1, timeframes.MINUTE_3, timeframes.MINUTE_5, timeframes.MINUTE_15,
+                         timeframes.MINUTE_30, timeframes.HOUR_1, timeframes.HOUR_2, timeframes.HOUR_4, timeframes.HOUR_8, timeframes.HOUR_12, timeframes.DAY_1]
+
+# Lighter natively serves these candle resolutions: 1m, 5m, 15m, 30m, 1h, 4h, 12h, 1d, 1w.
+# We expose the ones Jesse supports as trading timeframes (1w is dropped).
+LIGHTER_TIMEFRAMES = [timeframes.MINUTE_1, timeframes.MINUTE_5, timeframes.MINUTE_15,
+                      timeframes.MINUTE_30, timeframes.HOUR_1, timeframes.HOUR_4, timeframes.HOUR_12, timeframes.DAY_1]
+
+# KuCoin spot natively serves 1min,5min,15min,30min,1hour,2hour,4hour,6hour,8hour,12hour,1day,1week.
+# KuCoin futures granularities (minutes): 1,5,15,30,60,120,240,480,720,1440,10080.
+# We expose the resolutions both markets share that Jesse supports as trading timeframes.
+KUCOIN_TIMEFRAMES = [timeframes.MINUTE_1, timeframes.MINUTE_5, timeframes.MINUTE_15, timeframes.MINUTE_30,
+                     timeframes.HOUR_1, timeframes.HOUR_2, timeframes.HOUR_4, timeframes.HOUR_8, timeframes.HOUR_12, timeframes.DAY_1]
+# Kraken (both Spot WS-v2 OHLC and Futures charts) supports these resolutions in minutes:
+# 1, 5, 15, 30, 60, 240, 1440. We map them to Jesse timeframes.
+KRAKEN_TIMEFRAMES = [timeframes.MINUTE_1, timeframes.MINUTE_5, timeframes.MINUTE_15,
+                     timeframes.MINUTE_30, timeframes.HOUR_1, timeframes.HOUR_4, timeframes.DAY_1]
+
+exchange_info = {
+    # KUCOIN_SPOT
+    exchanges_enums.KUCOIN_SPOT: {
+        "name": exchanges_enums.KUCOIN_SPOT,
+        "url": JESSE_WEBSITE_URL + "/kucoin",
+        "fee": 0.001,  # spot taker fee 0.1%
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": KUCOIN_TIMEFRAMES,
+        "modes": {
+            "backtesting": True,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # KUCOIN_USDT_PERPETUAL
+    exchanges_enums.KUCOIN_USDT_PERPETUAL: {
+        "name": exchanges_enums.KUCOIN_USDT_PERPETUAL,
+        "url": JESSE_WEBSITE_URL + "/kucoin",
+        "fee": 0.0006,  # futures taker fee 0.06%
+        "type": "futures",
+        "settlement_currency": "USDT",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": KUCOIN_TIMEFRAMES,
+        "modes": {
+            "backtesting": True,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # BYBIT_USDT_PERPETUAL
+    exchanges_enums.BYBIT_USDT_PERPETUAL: {
+        "name": exchanges_enums.BYBIT_USDT_PERPETUAL,
+        "url": JESSE_WEBSITE_URL + "/bybit",
+        "fee": 0.00055,
+        "type": "futures",
+        "settlement_currency": "USDT",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": BYBIT_TIMEFRAMES,
+        "modes": {
+            "backtesting": True,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # BYBIT_USDT_PERPETUAL_TESTNET
+    exchanges_enums.BYBIT_USDT_PERPETUAL_TESTNET: {
+        "name": exchanges_enums.BYBIT_USDT_PERPETUAL_TESTNET,
+        "url": JESSE_WEBSITE_URL + "/bybit",
+        "fee": 0.00055,
+        "type": "futures",
+        "settlement_currency": "USDT",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": BYBIT_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # BYBIT_USDT_PERPETUAL
+    exchanges_enums.BYBIT_USDC_PERPETUAL: {
+        "name": exchanges_enums.BYBIT_USDC_PERPETUAL,
+        "url": JESSE_WEBSITE_URL + "/bybit",
+        "fee": 0.00055,
+        "type": "futures",
+        "settlement_currency": "USDC",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": BYBIT_TIMEFRAMES,
+        "modes": {
+            "backtesting": True,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # BYBIT_USDC_PERPETUAL_TESTNET
+    exchanges_enums.BYBIT_USDC_PERPETUAL_TESTNET: {
+        "name": exchanges_enums.BYBIT_USDC_PERPETUAL_TESTNET,
+        "url": JESSE_WEBSITE_URL + "/bybit",
+        "fee": 0.00055,
+        "type": "futures",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": BYBIT_TIMEFRAMES,
+        "settlement_currency": "USDC",
+        "modes": {
+            "backtesting": False,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # BYBIT_SPOT_TESTNET
+    exchanges_enums.BYBIT_SPOT: {
+        "name": exchanges_enums.BYBIT_SPOT,
+        "url": "https://jesse.trade/bybit",
+        "fee": 0.001,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": BYBIT_TIMEFRAMES,
+        "modes": {
+            "backtesting": True,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # BYBIT_SPOT_TESTNET
+    exchanges_enums.BYBIT_SPOT_TESTNET: {
+        "name": exchanges_enums.BYBIT_SPOT_TESTNET,
+        "url": "https://jesse.trade/bybit",
+        "fee": 0.001,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": BYBIT_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # BITFINEX_SPOT
+    exchanges_enums.BITFINEX_SPOT: {
+        "name": exchanges_enums.BITFINEX_SPOT,
+        "url": "https://bitfinex.com",
+        "fee": 0.002,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": [
+            timeframes.MINUTE_1,
+            timeframes.MINUTE_5,
+            timeframes.MINUTE_15,
+            timeframes.MINUTE_30,
+            timeframes.HOUR_1,
+            timeframes.HOUR_3,
+            timeframes.HOUR_6,
+            timeframes.HOUR_12,
+            timeframes.DAY_1,
+        ],
+        "modes": {
+            "backtesting": True,
+            "live_trading": False,
+        },
+        "required_live_plan": "premium",
+    },
+    # BINANCE_SPOT
+    exchanges_enums.BINANCE_SPOT: {
+        "name": exchanges_enums.BINANCE_SPOT,
+        "url": "https://binance.com",
+        "fee": 0.001,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": BINANCE_TIMEFRAMES,
+        "modes": {
+            "backtesting": True,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # BINANCE_US_SPOT
+    exchanges_enums.BINANCE_US_SPOT: {
+        "name": exchanges_enums.BINANCE_US_SPOT,
+        "url": "https://binance.us",
+        "fee": 0.001,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": BINANCE_TIMEFRAMES,
+        "modes": {
+            "backtesting": True,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # BINANCE_PERPETUAL_FUTURES
+    exchanges_enums.BINANCE_PERPETUAL_FUTURES: {
+        "name": exchanges_enums.BINANCE_PERPETUAL_FUTURES,
+        "url": "https://binance.com",
+        "fee": 0.0004,
+        "type": "futures",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": BINANCE_TIMEFRAMES,
+        "modes": {
+            "backtesting": True,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # BINANCE_PERPETUAL_FUTURES_TESTNET
+    exchanges_enums.BINANCE_PERPETUAL_FUTURES_TESTNET: {
+        "name": exchanges_enums.BINANCE_PERPETUAL_FUTURES_TESTNET,
+        "url": "https://binance.com",
+        "fee": 0.0004,
+        "type": "futures",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": BINANCE_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # COINBASE_SPOT
+    exchanges_enums.COINBASE_SPOT: {
+        "name": exchanges_enums.COINBASE_SPOT,
+        "url": "https://www.coinbase.com/advanced-trade/spot/BTC-USD",
+        "fee": 0.0003,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": COINBASE_TIMEFRAMES,
+        "modes": {
+            "backtesting": True,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    exchanges_enums.APEX_OMNI_PERPETUAL_TESTNET: {
+        "name": exchanges_enums.APEX_OMNI_PERPETUAL_TESTNET,
+        "url": "https://testnet.omni.apex.exchange/trade/BTCUSD",
+        "fee": 0.0005,
+        "type": "futures",
+        "supported_leverage_modes": ["cross"],
+        "supported_timeframes": APEX_OMNI_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": False,
+        },
+        "required_live_plan": "free",
+    },
+    exchanges_enums.APEX_OMNI_PERPETUAL: {
+        "name": exchanges_enums.APEX_OMNI_PERPETUAL,
+        "url": "https://omni.apex.exchange/trade/BTCUSD",
+        "fee": 0.0005,
+        "type": "futures",
+        "supported_leverage_modes": ["cross"],
+        "supported_timeframes": APEX_OMNI_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    exchanges_enums.GATE_USDT_PERPETUAL: {
+        "name": exchanges_enums.GATE_USDT_PERPETUAL,
+        "url": "https://jesse.trade/gate",
+        "fee": 0.0005,
+        "type": "futures",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": GATE_TIMEFRAMES,
+        "modes": {
+            "backtesting": True,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    exchanges_enums.GATE_SPOT: {
+        "name": exchanges_enums.GATE_SPOT,
+        "url": "https://jesse.trade/gate",
+        "fee": 0.0005,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": GATE_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # FTX_PERPETUAL_FUTURES
+    exchanges_enums.FTX_PERPETUAL_FUTURES: {
+        "name": exchanges_enums.FTX_PERPETUAL_FUTURES,
+        "url": "https://ftx.com/markets/future",
+        "fee": 0.0006,
+        "type": "futures",
+        "supported_leverage_modes": ["cross"],
+        "supported_timeframes": FTX_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": False,
+        },
+        "required_live_plan": "premium",
+    },
+    # FTX_SPOT
+    exchanges_enums.FTX_SPOT: {
+        "name": exchanges_enums.FTX_SPOT,
+        "url": "https://ftx.com/markets/spot",
+        "fee": 0.0007,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": FTX_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": False,
+        },
+        "required_live_plan": "premium",
+    },
+    # FTX_US_SPOT
+    exchanges_enums.FTX_US_SPOT: {
+        "name": exchanges_enums.FTX_US_SPOT,
+        "url": "https://ftx.us",
+        "fee": 0.002,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": FTX_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": False,
+        },
+        "required_live_plan": "premium",
+    },
+    # BITGET_USDT_PERPETUAL_TESTNET
+    exchanges_enums.BITGET_USDT_PERPETUAL_TESTNET: {
+        "name": exchanges_enums.BITGET_USDT_PERPETUAL_TESTNET,
+        "url": JESSE_WEBSITE_URL + "/bitget",
+        "fee": 0.0006,
+        "type": "futures",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": BITGET_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": False,
+        },
+        "required_live_plan": "premium",
+    },
+    # BITGET_USDT_PERPETUAL
+    exchanges_enums.BITGET_USDT_PERPETUAL: {
+        "name": exchanges_enums.BITGET_USDT_PERPETUAL,
+        "url": JESSE_WEBSITE_URL + "/bitget",
+        "fee": 0.0006,
+        "type": "futures",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": BITGET_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": False,
+        },
+        "required_live_plan": "premium",
+    },
+    # BITGET_SPOT
+    exchanges_enums.BITGET_SPOT: {
+        "name": exchanges_enums.BITGET_SPOT,
+        "url": JESSE_WEBSITE_URL + "/bitget",
+        "fee": 0.0006,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": BITGET_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": False,
+        },
+        "required_live_plan": "premium",
+    },
+    # DyDx
+    exchanges_enums.DYDX_PERPETUAL: {
+        "name": exchanges_enums.DYDX_PERPETUAL,
+        "url": JESSE_WEBSITE_URL + "/dydx",
+        "fee": 0.0005,
+        "type": "futures",
+        "supported_leverage_modes": ["cross"],
+        "supported_timeframes": DYDX_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": False,
+        },
+        "required_live_plan": "premium",
+    },
+    # DyDx Testnet
+    exchanges_enums.DYDX_PERPETUAL_TESTNET: {
+        "name": exchanges_enums.DYDX_PERPETUAL_TESTNET,
+        "url": "https://trade.stage.dydx.exchange/trade/ETH-USD",
+        "fee": 0.0005,
+        "type": "futures",
+        "supported_leverage_modes": ["cross"],
+        "supported_timeframes": DYDX_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": False,
+        },
+        "required_live_plan": "premium",
+    },
+    # HyperLiquid
+    exchanges_enums.HYPERLIQUID_PERPETUAL: {
+        "name": exchanges_enums.HYPERLIQUID_PERPETUAL,
+        "url": "https://app.hyperliquid.xyz/trade",
+        "fee": 0.0001,
+        "type": "futures",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": HYPERLIQUID_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    exchanges_enums.HYPERLIQUID_PERPETUAL_TESTNET: {
+        "name": exchanges_enums.HYPERLIQUID_PERPETUAL_TESTNET,
+        "url": "https://app.hyperliquid-testnet.xyz/trade",
+        "fee": 0.0001,
+        "type": "futures",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": HYPERLIQUID_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": True,
+        },
+        "required_live_plan": "free",
+    },
+    # Lighter (ZK-rollup orderbook perp DEX, USDC-settled).
+    # backtesting is False: Lighter only serves a ~130-day rolling candle window, too
+    # shallow for meaningful backtests. The import driver is still registered so the live
+    # runtime can fetch warm-up candles.
+    exchanges_enums.LIGHTER_PERPETUAL: {
+        "name": exchanges_enums.LIGHTER_PERPETUAL,
+        "url": "https://lighter.xyz",
+        "fee": 0.0,  # Lighter currently charges 0 maker/taker fees on perps
+        "type": "futures",
+        # Lighter displays markets as BASE-USD (collateral is USDC, handled in the driver);
+        # omit settlement_currency so Jesse derives "USD" from the symbol, like Hyperliquid.
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": LIGHTER_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    exchanges_enums.LIGHTER_PERPETUAL_TESTNET: {
+        "name": exchanges_enums.LIGHTER_PERPETUAL_TESTNET,
+        "url": "https://testnet.app.lighter.xyz",
+        "fee": 0.0,
+        "type": "futures",
+        # markets display as BASE-USD; settlement_currency derived from the symbol (USD)
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": LIGHTER_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": True,
+        },
+        "required_live_plan": "free",
+    },
+    # KRAKEN_SPOT
+    exchanges_enums.KRAKEN_SPOT: {
+        "name": exchanges_enums.KRAKEN_SPOT,
+        "url": JESSE_WEBSITE_URL + "/kraken",
+        # Kraken spot taker fee at the lowest volume tier is ~0.40% (0.26% maker).
+        # We use 0.0026 as a representative value; the real fee depends on the account's 30d volume tier.
+        "fee": 0.0026,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": KRAKEN_TIMEFRAMES,
+        "modes": {
+            # Kraken's public OHLC REST endpoint only serves the most recent 720 candles
+            # (a rolling window), so it cannot be used for historical backtesting.
+            "backtesting": False,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # KRAKEN_PERPETUAL (Kraken Pro Futures — PF_ multi-collateral linear perpetuals, USD-margined)
+    exchanges_enums.KRAKEN_PERPETUAL: {
+        "name": exchanges_enums.KRAKEN_PERPETUAL,
+        "url": JESSE_WEBSITE_URL + "/kraken",
+        "fee": 0.0005,
+        "type": "futures",
+        # PF_ perpetuals are USD-quoted, multi-collateral; settlement_currency derived from symbol (USD)
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": KRAKEN_TIMEFRAMES,
+        "modes": {
+            "backtesting": True,
+            "live_trading": True,
+        },
+        "required_live_plan": "premium",
+    },
+    # KRAKEN_PERPETUAL_TESTNET (demo-futures.kraken.com)
+    exchanges_enums.KRAKEN_PERPETUAL_TESTNET: {
+        "name": exchanges_enums.KRAKEN_PERPETUAL_TESTNET,
+        "url": JESSE_WEBSITE_URL + "/kraken",
+        "fee": 0.0005,
+        "type": "futures",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": KRAKEN_TIMEFRAMES,
+        "modes": {
+            "backtesting": False,
+            "live_trading": True,
+        },
+        "required_live_plan": "free",
+    },
+    exchanges_enums.CUSTOM_DATA: {
+        "name": exchanges_enums.CUSTOM_DATA,
+        "url": "https://docs.jesse.trade",
+        "fee": 0.0004,
+        "type": "futures",
+        "supported_leverage_modes": ["cross", "isolated"],
+        "supported_timeframes": [timeframes.MINUTE_1],
+        "modes": {
+            "backtesting": True,
+            "live_trading": False,
+        },
+        "required_live_plan": "free",
+        # Files can represent any market; Binance-style perpetual execution defaults remain editable.
+        "asset_class": "equity",
+        "instrument_type": "perpetual",
+        "simulation_model": "perpetual_futures",
+        "annualization": 252,
+    },
+    exchanges_enums.MASSIVE_STOCKS: {
+        "name": exchanges_enums.MASSIVE_STOCKS,
+        "url": "https://massive.com",
+        # Massive is a historical data source, so execution fees remain a run setting.
+        "fee": 0.0,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": [timeframes.MINUTE_1],
+        "modes": {
+            # Historical-only sources reuse the backtesting selector but never appear in live execution.
+            "backtesting": True,
+            "live_trading": False,
+        },
+        "required_live_plan": "premium",
+        "asset_class": "equity",
+        "instrument_type": "stock",
+        "simulation_model": "spot",
+        "annualization": 252,
+    },
+    exchanges_enums.MASSIVE_CURRENCIES: {
+        "name": exchanges_enums.MASSIVE_CURRENCIES,
+        "url": "https://massive.com",
+        "fee": 0.0,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": [timeframes.MINUTE_1],
+        "modes": {
+            "backtesting": True,
+            "live_trading": False,
+        },
+        "required_live_plan": "premium",
+        "asset_class": "currency",
+        "instrument_type": "spot",
+        "simulation_model": "spot",
+        # The merged product defaults to the conventional FX basis; crypto research can override it.
+        "annualization": 252,
+    },
+    exchanges_enums.MASSIVE_INDICES: {
+        "name": exchanges_enums.MASSIVE_INDICES,
+        "url": "https://massive.com",
+        "fee": 0.0,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": [timeframes.MINUTE_1],
+        "modes": {
+            "backtesting": True,
+            "live_trading": False,
+        },
+        "required_live_plan": "premium",
+        "asset_class": "index",
+        "instrument_type": "index",
+        "simulation_model": "spot",
+        "annualization": 252,
+    },
+    exchanges_enums.MASSIVE_FUTURES: {
+        "name": exchanges_enums.MASSIVE_FUTURES,
+        "url": "https://massive.com",
+        # Contract multipliers, settlement, and rollover are not inferred from candle data.
+        "fee": 0.0,
+        "type": "spot",
+        "supported_leverage_modes": [],
+        "supported_timeframes": [timeframes.MINUTE_1],
+        "modes": {
+            "backtesting": True,
+            "live_trading": False,
+        },
+        "required_live_plan": "premium",
+        "asset_class": "futures",
+        "instrument_type": "futures_contract",
+        # Price research uses synthetic units until explicit contract-multiplier accounting exists.
+        "simulation_model": "spot",
+        "annualization": 252,
+    },
+}
+
+# Trading exchange entries are crypto unless a historical source declares its
+# own classification and simulation assumptions.
+for _exchange in exchange_info.values():
+    _exchange.setdefault('asset_class', 'crypto')
+    _exchange.setdefault('instrument_type', 'perpetual' if _exchange['type'] == 'futures' else 'spot')
+    _exchange.setdefault('simulation_model', 'perpetual_futures' if _exchange['type'] == 'futures' else 'spot')
+    _exchange.setdefault('annualization', 365)
+
+# list of supported exchanges for backtesting
+backtesting_exchanges = [k for k, v in exchange_info.items() if v['modes']['backtesting'] is True]
+backtesting_exchanges = list(sorted(backtesting_exchanges))
+
+# list of supported exchanges for live trading
+live_trading_exchanges = [k for k, v in exchange_info.items() if v['modes']['live_trading'] is True]
+live_trading_exchanges = list(sorted(live_trading_exchanges))
+
+# used for backtesting, and live trading when local candle generation is enabled:
+jesse_supported_timeframes = [
+    timeframes.MINUTE_1,
+    timeframes.MINUTE_3,
+    timeframes.MINUTE_5,
+    timeframes.MINUTE_15,
+    timeframes.MINUTE_30,
+    timeframes.MINUTE_45,
+    timeframes.HOUR_1,
+    timeframes.HOUR_2,
+    timeframes.HOUR_3,
+    timeframes.HOUR_4,
+    timeframes.HOUR_6,
+    timeframes.HOUR_8,
+    timeframes.HOUR_12,
+    timeframes.DAY_1,
+]

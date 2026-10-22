@@ -1,0 +1,68 @@
+#  Drakkar-Software OctoBot-Tentacles
+#  Copyright (c) Drakkar-Software, All rights reserved.
+#
+#  This library is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU Lesser General Public
+#  License as published by the Free Software Foundation; either
+#  version 3.0 of the License, or (at your option) any later version.
+#
+#  This library is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public
+#  License along with this library.
+import asyncio
+import decimal
+import typing
+
+import octobot_trading.exchanges as exchanges
+import octobot_trading.enums as trading_enums
+
+
+class Phemex(exchanges.RestExchange):
+    ALLOWED_OHLCV_LIMITS = [5, 10, 50, 100, 500, 1000]
+
+    @classmethod
+    def get_name(cls):
+        return 'phemex'
+
+    def _get_adapted_limit(self, limit):
+        prev = self.ALLOWED_OHLCV_LIMITS[0]
+        for adapted in self.ALLOWED_OHLCV_LIMITS:
+            if adapted > limit:
+                return prev
+            prev = adapted
+        return prev
+
+    async def get_symbol_prices(self, symbol, time_frame, limit: int = 500, **kwargs: dict):
+        if limit not in self.ALLOWED_OHLCV_LIMITS:
+            limit = self._get_adapted_limit(limit)
+        return await super().get_symbol_prices(symbol, time_frame, limit=limit, **kwargs)
+
+    async def get_order(
+        self,
+        exchange_order_id: str,
+        symbol: typing.Optional[str] = None,
+        order_type: typing.Optional[trading_enums.TraderOrderType] = None,
+        **kwargs: dict
+    ) -> dict:
+        if order := await self.connector.get_order(
+            symbol=symbol, exchange_order_id=exchange_order_id, order_type=order_type, **kwargs
+        ):
+            return order
+        # try from closed orders (get_order is not returning filled or cancelled orders)
+        if order := await self.get_order_from_open_and_closed_orders(exchange_order_id, symbol):
+            return order
+        # try from trades (get_order is not returning filled or cancelled orders)
+        return await self._get_order_from_trades(symbol, exchange_order_id, {})
+
+    async def _get_order_from_trades(self, symbol, exchange_order_id, order_to_update):
+        # usually the last trade is the right one
+        for _ in range(3):
+            if (order := await self.get_order_from_trades(symbol, exchange_order_id, order_to_update)) is None:
+                await asyncio.sleep(3)
+            else:
+                return order
+        return None

@@ -1,0 +1,12 @@
+## Others
+colorlog==6.10.1
+
+# Community
+gmqtt==0.7.0
+pgpy==0.6.0
+clickhouse-connect==0.10.0
+pydantic==2.13.5
+
+# used by ccxt for protobuf "websockets" such as mexc
+# lock protobuf to avoid using .rc versions
+protobuf==6.33.5

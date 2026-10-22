@@ -1,0 +1,475 @@
+import datetime
+import time
+
+import mock
+import pytest
+
+pytest.importorskip("octobot_flow")
+
+import octobot_copy.constants as copy_constants
+import octobot_flow.entities as flow_entities
+import octobot_protocol.models as protocol_models
+
+import octobot_node.errors as node_errors
+import octobot_node.scheduler.user_actions.signal_priority_action as signal_priority_action_module
+import octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation as signal_automation_executor
+
+from .. import provider_assertions
+
+
+_TEST_WALLET_ADDRESS = "0xaaabbbcccddd"
+_TEST_AUTOMATION_ID = "00000000-0000-4000-8000-000000000099"
+
+
+def _wrap(configuration_payload) -> protocol_models.UserActionConfiguration:
+    return protocol_models.UserActionConfiguration.from_json(configuration_payload.to_json())
+
+
+def _signal_payload_wrapper(actual_instance) -> protocol_models.SignalAutomationConfigurationSignalPayload:
+    return protocol_models.SignalAutomationConfigurationSignalPayload(actual_instance=actual_instance)
+
+
+def _signal_configuration(
+    *,
+    automation_id: str = _TEST_AUTOMATION_ID,
+    signal_type: protocol_models.AutomationSignalType,
+    signal_payload: protocol_models.SignalAutomationConfigurationSignalPayload | None = None,
+) -> protocol_models.SignalAutomationConfiguration:
+    return protocol_models.SignalAutomationConfiguration(
+        action_type=protocol_models.UserActionType.AUTOMATION_SIGNAL,
+        automation_id=automation_id,
+        signal_type=signal_type,
+        signal_payload=signal_payload,
+    )
+
+
+def _user_action_signal(
+    *,
+    user_action_id: str,
+    signal_type: protocol_models.AutomationSignalType,
+    signal_payload: protocol_models.SignalAutomationConfigurationSignalPayload | None = None,
+    automation_id: str = _TEST_AUTOMATION_ID,
+) -> protocol_models.UserAction:
+    configuration_inner = _signal_configuration(
+        automation_id=automation_id,
+        signal_type=signal_type,
+        signal_payload=signal_payload,
+    )
+    return protocol_models.UserAction(id=user_action_id, configuration=_wrap(configuration_inner))
+
+
+def _minimal_trading_signal_dict() -> dict:
+    return flow_entities.TradingSignal(
+        strategy_id="test-strategy-id",
+        account=protocol_models.CopiedAccount(
+            version=copy_constants.COPIED_ACCOUNT_VERSION,
+            updated_at=time.time(),
+            copied_assets=[],
+        ),
+    ).to_dict(include_default_values=False)
+
+
+def _priority_action(action_id: str, dsl_script: str, *, await_execution_result: bool = True):
+    return signal_priority_action_module.SignalPriorityAction(
+        id=action_id,
+        dsl_script=dsl_script,
+        await_execution_result=await_execution_result,
+    )
+
+
+class TestSignalAutomationActionExecutorActions:
+    @pytest.mark.asyncio
+    async def test_await_path_sets_execution_context_without_completing(self):
+        built_actions = [_priority_action("action_1", "noop()")]
+        user_action = _user_action_signal(
+            user_action_id="ua-signal-actions-await",
+            signal_type=protocol_models.AutomationSignalType.ACTIONS,
+            signal_payload=_signal_payload_wrapper([{"signal": "signal"}]),
+        )
+        executor = signal_automation_executor.SignalAutomationActionExecutor(_TEST_WALLET_ADDRESS)
+        with (
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_module.is_initialized",
+                return_value=True,
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.dbos.DBOS.workflow_id",
+                "ua-workflow-await",
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.signal_priority_action_builder.build_signal_priority_actions",
+                new_callable=mock.AsyncMock,
+                return_value=built_actions,
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_tasks.send_actions_to_active_automation",
+                new_callable=mock.AsyncMock,
+            ) as send_actions_mock,
+        ):
+            await executor.execute(user_action)
+
+        send_actions_mock.assert_awaited_once()
+        send_call = send_actions_mock.await_args
+        assert send_call.args[2] == [
+            action.to_dict(include_default_values=False) for action in built_actions
+        ]
+        assert len(send_call.args) > 3 and send_call.args[3] is not None
+        assert user_action.status == protocol_models.UserActionStatus.RUNNING
+        assert executor.signal_execution_await_context is not None
+        assert executor.signal_execution_await_context.user_action_id == user_action.id
+        assert executor.signal_execution_await_context.sent_action_ids == ["action_1"]
+        assert not hasattr(executor.signal_execution_await_context, "expected_action_count")
+
+    @pytest.mark.asyncio
+    async def test_fire_and_forget_when_all_actions_opt_out_of_await(self):
+        built_actions = [
+            _priority_action("action_0", "noop()", await_execution_result=False),
+            _priority_action("action_1", "noop()", await_execution_result=False),
+        ]
+        user_action = _user_action_signal(
+            user_action_id="ua-signal-actions-fire-and-forget",
+            signal_type=protocol_models.AutomationSignalType.ACTIONS,
+            signal_payload=_signal_payload_wrapper(
+                [
+                    {"signal": "signal0", "await_execution_result": False},
+                    {"signal": "signal1", "await_execution_result": False},
+                ],
+            ),
+        )
+        executor = signal_automation_executor.SignalAutomationActionExecutor(_TEST_WALLET_ADDRESS)
+        with (
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_module.is_initialized",
+                return_value=True,
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.signal_priority_action_builder.build_signal_priority_actions",
+                new_callable=mock.AsyncMock,
+                return_value=built_actions,
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_tasks.send_actions_to_active_automation",
+                new_callable=mock.AsyncMock,
+            ) as send_actions_mock,
+        ):
+            await executor.execute(user_action)
+
+        send_actions_mock.assert_awaited_once_with(
+            _TEST_AUTOMATION_ID,
+            _TEST_WALLET_ADDRESS,
+            [action.to_dict(include_default_values=False) for action in built_actions],
+        )
+        assert len(send_actions_mock.await_args.args) == 3
+        provider_assertions.assert_user_action_terminal_state(
+            user_action=user_action,
+            expected_status=protocol_models.UserActionStatus.COMPLETED,
+            result_channel="automation",
+            expect_error_details=False,
+        )
+
+    @pytest.mark.asyncio
+    async def test_completed_on_valid_list(self):
+        built_actions = [_priority_action("action_1", "noop()")]
+        user_action = _user_action_signal(
+            user_action_id="ua-signal-actions-built",
+            signal_type=protocol_models.AutomationSignalType.ACTIONS,
+            signal_payload=_signal_payload_wrapper([{"signal": "signal"}]),
+        )
+        executor = signal_automation_executor.SignalAutomationActionExecutor(_TEST_WALLET_ADDRESS)
+        with (
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_module.is_initialized",
+                return_value=True,
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.dbos.DBOS.workflow_id",
+                "ua-workflow-await",
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.signal_priority_action_builder.build_signal_priority_actions",
+                new_callable=mock.AsyncMock,
+                return_value=built_actions,
+            ) as build_mock,
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_tasks.send_actions_to_active_automation",
+                new_callable=mock.AsyncMock,
+            ) as send_actions_mock,
+        ):
+            await executor.execute(user_action)
+
+        build_mock.assert_awaited_once()
+        send_actions_mock.assert_awaited_once()
+        assert len(send_actions_mock.await_args.args) > 3 and send_actions_mock.await_args.args[3] is not None
+        assert user_action.status == protocol_models.UserActionStatus.RUNNING
+
+    @pytest.mark.asyncio
+    async def test_failed_on_builder_error(self):
+        user_action = _user_action_signal(
+            user_action_id="ua-signal-actions-failed",
+            signal_type=protocol_models.AutomationSignalType.ACTIONS,
+            signal_payload=_signal_payload_wrapper([{"signal": "bad"}]),
+        )
+        executor = signal_automation_executor.SignalAutomationActionExecutor(_TEST_WALLET_ADDRESS)
+        with (
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_module.is_initialized",
+                return_value=True,
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.signal_priority_action_builder.build_signal_priority_actions",
+                new_callable=mock.AsyncMock,
+                side_effect=node_errors.InvalidUserActionPayloadError("bad signal"),
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_tasks.send_actions_to_active_automation",
+                new_callable=mock.AsyncMock,
+            ) as send_actions_mock,
+        ):
+            with pytest.raises(node_errors.InvalidUserActionPayloadError):
+                await executor.execute(user_action)
+
+        send_actions_mock.assert_not_awaited()
+        provider_assertions.assert_user_action_terminal_state(
+            user_action=user_action,
+            expected_status=protocol_models.UserActionStatus.FAILED,
+            result_channel="automation",
+            expect_error_details=True,
+            expected_error_message=protocol_models.AutomationActionResultErrorMessage.INVALID_CONFIGURATION,
+        )
+
+    @pytest.mark.asyncio
+    async def test_send_receives_multiple_actions(self):
+        built_actions = [
+            _priority_action("action_0", "market('buy', 'BTC/USDC', 0.01)"),
+            _priority_action("action_1", "cancel_order('BTC/USDC')"),
+        ]
+        user_action = _user_action_signal(
+            user_action_id="ua-signal-actions-multi",
+            signal_type=protocol_models.AutomationSignalType.ACTIONS,
+            signal_payload=_signal_payload_wrapper(
+                [{"signal": "signal0"}, {"signal": "signal1"}],
+            ),
+        )
+        executor = signal_automation_executor.SignalAutomationActionExecutor(_TEST_WALLET_ADDRESS)
+        with (
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_module.is_initialized",
+                return_value=True,
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.dbos.DBOS.workflow_id",
+                "ua-workflow-await",
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.signal_priority_action_builder.build_signal_priority_actions",
+                new_callable=mock.AsyncMock,
+                return_value=built_actions,
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_tasks.send_actions_to_active_automation",
+                new_callable=mock.AsyncMock,
+            ) as send_actions_mock,
+        ):
+            await executor.execute(user_action)
+
+        send_actions_mock.assert_awaited_once()
+        callback_argument = send_actions_mock.await_args.args[3]
+        assert callback_argument.user_action_id == user_action.id
+        assert send_actions_mock.await_args.args[2] == [
+            action.to_dict(include_default_values=False) for action in built_actions
+        ]
+
+
+class Test_parse_trading_signal_payload:
+    def test_dict_returns_trading_signal(self):
+        payload = _minimal_trading_signal_dict()
+        parsed = signal_automation_executor._parse_trading_signal_payload(payload)
+        assert isinstance(parsed, flow_entities.TradingSignal)
+        assert parsed.strategy_id == "test-strategy-id"
+
+    def test_one_element_list_returns_trading_signal(self):
+        payload = _minimal_trading_signal_dict()
+        parsed = signal_automation_executor._parse_trading_signal_payload([payload])
+        assert parsed.strategy_id == "test-strategy-id"
+
+    def test_empty_list_raises_invalid_payload(self):
+        with pytest.raises(node_errors.InvalidUserActionPayloadError):
+            signal_automation_executor._parse_trading_signal_payload([])
+
+    def test_none_raises_invalid_payload(self):
+        with pytest.raises(node_errors.InvalidUserActionPayloadError, match="required"):
+            signal_automation_executor._parse_trading_signal_payload(None)
+
+
+class TestSignalAutomationActionExecutor_execute:
+    @pytest.mark.asyncio
+    async def test_execute_forced_trigger_calls_send_forced_trigger_to_active_automation(self):
+        user_action = _user_action_signal(
+            user_action_id="ua-signal-forced",
+            signal_type=protocol_models.AutomationSignalType.FORCED_TRIGGER,
+        )
+        executor = signal_automation_executor.SignalAutomationActionExecutor(_TEST_WALLET_ADDRESS)
+        with (
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_module.is_initialized",
+                return_value=True,
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_tasks.send_forced_trigger_to_active_automation",
+                new_callable=mock.AsyncMock,
+            ) as send_forced_trigger_mock,
+        ):
+            await executor.execute(user_action)
+
+        send_forced_trigger_mock.assert_awaited_once_with(_TEST_AUTOMATION_ID, _TEST_WALLET_ADDRESS)
+        provider_assertions.assert_user_action_terminal_state(
+            user_action=user_action,
+            expected_status=protocol_models.UserActionStatus.COMPLETED,
+            result_channel="automation",
+            expect_error_details=False,
+        )
+
+    @pytest.mark.asyncio
+    async def test_execute_actions_calls_send_with_execution_callback(self):
+        built_actions = [_priority_action("action_1", "noop()")]
+        user_action = _user_action_signal(
+            user_action_id="ua-signal-actions",
+            signal_type=protocol_models.AutomationSignalType.ACTIONS,
+            signal_payload=_signal_payload_wrapper([{"signal": "signal"}]),
+        )
+        executor = signal_automation_executor.SignalAutomationActionExecutor(_TEST_WALLET_ADDRESS)
+        with (
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_module.is_initialized",
+                return_value=True,
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.dbos.DBOS.workflow_id",
+                "ua-workflow-await",
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.signal_priority_action_builder.build_signal_priority_actions",
+                new_callable=mock.AsyncMock,
+                return_value=built_actions,
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_tasks.send_actions_to_active_automation",
+                new_callable=mock.AsyncMock,
+            ) as send_actions_mock,
+        ):
+            await executor.execute(user_action)
+
+        send_actions_mock.assert_awaited_once()
+        assert len(send_actions_mock.await_args.args) > 3 and send_actions_mock.await_args.args[3] is not None
+        assert user_action.status == protocol_models.UserActionStatus.RUNNING
+
+    @pytest.mark.asyncio
+    async def test_execute_trading_signal_calls_trigger_copier_automation(self):
+        trading_signal_dict = _minimal_trading_signal_dict()
+        user_action = _user_action_signal(
+            user_action_id="ua-signal-trading",
+            signal_type=protocol_models.AutomationSignalType.TRADING_SIGNAL,
+            signal_payload=_signal_payload_wrapper(trading_signal_dict),
+        )
+        executor = signal_automation_executor.SignalAutomationActionExecutor(_TEST_WALLET_ADDRESS)
+        with (
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_module.is_initialized",
+                return_value=True,
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_tasks.trigger_copier_automation",
+                new_callable=mock.AsyncMock,
+            ) as trigger_copier_mock,
+        ):
+            await executor.execute(user_action)
+
+        trigger_copier_mock.assert_awaited_once()
+        call_args = trigger_copier_mock.await_args
+        assert call_args.args[0] == _TEST_AUTOMATION_ID
+        assert isinstance(call_args.args[1], flow_entities.TradingSignal)
+        assert call_args.args[1].strategy_id == "test-strategy-id"
+        provider_assertions.assert_user_action_terminal_state(
+            user_action=user_action,
+            expected_status=protocol_models.UserActionStatus.COMPLETED,
+            result_channel="automation",
+            expect_error_details=False,
+        )
+
+    @pytest.mark.asyncio
+    async def test_execute_raises_active_automation_workflow_not_found_when_no_workflow_resolves(self):
+        user_action = _user_action_signal(
+            user_action_id="ua-signal-missing",
+            signal_type=protocol_models.AutomationSignalType.FORCED_TRIGGER,
+        )
+        executor = signal_automation_executor.SignalAutomationActionExecutor(_TEST_WALLET_ADDRESS)
+        with (
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_module.is_initialized",
+                return_value=True,
+            ),
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_tasks.send_forced_trigger_to_active_automation",
+                new_callable=mock.AsyncMock,
+                side_effect=node_errors.ActiveAutomationWorkflowNotFoundError("missing"),
+            ) as send_forced_trigger_mock,
+        ):
+            with pytest.raises(node_errors.ActiveAutomationWorkflowNotFoundError):
+                await executor.execute(user_action)
+
+        send_forced_trigger_mock.assert_awaited_once()
+        provider_assertions.assert_user_action_terminal_state(
+            user_action=user_action,
+            expected_status=protocol_models.UserActionStatus.FAILED,
+            result_channel="automation",
+            expect_error_details=True,
+            expected_error_message=protocol_models.AutomationActionResultErrorMessage.AUTOMATION_NOT_FOUND,
+        )
+
+    @pytest.mark.asyncio
+    async def test_execute_raises_when_scheduler_not_initialized(self):
+        user_action = _user_action_signal(
+            user_action_id="ua-signal-no-scheduler",
+            signal_type=protocol_models.AutomationSignalType.FORCED_TRIGGER,
+        )
+        executor = signal_automation_executor.SignalAutomationActionExecutor(_TEST_WALLET_ADDRESS)
+        with mock.patch(
+            "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_module.is_initialized",
+            return_value=False,
+        ):
+            with pytest.raises(RuntimeError, match="Scheduler is not initialized"):
+                await executor.execute(user_action)
+
+        provider_assertions.assert_user_action_terminal_state(
+            user_action=user_action,
+            expected_status=protocol_models.UserActionStatus.FAILED,
+            result_channel="automation",
+            expect_error_details=True,
+            expected_error_message=protocol_models.AutomationActionResultErrorMessage.INTERNAL_ERROR,
+        )
+
+    @pytest.mark.asyncio
+    async def test_invalid_payload_raises_invalid_user_action_payload(self):
+        wrong = protocol_models.StopAutomationConfiguration(
+            id="auto-stop",
+            action_type=protocol_models.UserActionType.AUTOMATION_STOP,
+        )
+        user_action = protocol_models.UserAction(id="ua-bad-signal", configuration=_wrap(wrong))
+        executor = signal_automation_executor.SignalAutomationActionExecutor(_TEST_WALLET_ADDRESS)
+
+        with (
+            mock.patch(
+                "octobot_node.scheduler.user_actions.user_actions_executor.automation.signal_automation.scheduler_module.is_initialized",
+                return_value=True,
+            ),
+            pytest.raises(node_errors.InvalidUserActionPayloadError),
+        ):
+            await executor.execute(user_action)
+
+        provider_assertions.assert_user_action_terminal_state(
+            user_action=user_action,
+            expected_status=protocol_models.UserActionStatus.FAILED,
+            result_channel="automation",
+            expect_error_details=True,
+            expected_error_message=protocol_models.AutomationActionResultErrorMessage.INVALID_CONFIGURATION,
+        )

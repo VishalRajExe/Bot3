@@ -1,0 +1,157 @@
+{
+  "type": "object",
+  "properties": {
+    "DEBUG": {
+      "type": "boolean"
+    },
+    "DEV-MODE": {
+      "type": "boolean"
+    },
+    "SAVE_EVALUATIONS": {
+      "type": "boolean"
+    },
+    "accepted_terms": {
+      "type": "boolean"
+    },
+    "octobot_name": {
+      "type": "string"
+    },
+    "distribution": {
+      "type": "string"
+    },
+    "profile": {
+      "type": "string"
+    },
+    "sync": {
+      "type": "object",
+      "properties": {
+        "encryption_secret": {
+          "type": "string"
+        }
+      }
+    },
+    "community": {
+      "type": "object",
+      "properties": {
+        "bot_id": {
+          "type": "string"
+        },
+        "local_data_identifier": {
+          "type": "string"
+        },
+        "supabase.auth.token": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        }
+      }
+    },
+    "journal": {
+      "type": "object",
+      "properties": {
+        "install_id": {
+          "type": "string"
+        },
+        "onboarding_started_at": {
+          "type": ["number", "null"]
+        },
+        "first_automation_started_at": {
+          "type": ["number", "null"]
+        },
+        "connection_sequence": {
+          "type": "integer"
+        },
+        "last_user_data_pull_at": {
+          "type": ["number", "null"]
+        },
+        "tracked_automation_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "backtesting": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "data-collector": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string"
+        }
+      }
+    },
+    "exchanges": {
+      "type": "object",
+      "patternProperties": {
+        "^.*$": {
+          "type": "object"
+        }
+      }
+    },
+    "community-token": {
+      "type": "string"
+    },
+    "notification": {
+      "type": "object",
+      "properties": {
+        "global-info": {
+          "type": "boolean"
+        },
+        "price-alerts": {
+          "type": "boolean"
+        },
+        "trades": {
+          "type": "boolean"
+        },
+        "other": {
+          "type": "boolean"
+        },
+        "notification-type": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "global-info",
+        "price-alerts",
+        "trades",
+        "notification-type"
+      ]
+    },
+    "services": {
+      "type": "object",
+      "patternProperties": {
+        "^.*$": {
+          "type": "object"
+        }
+      }
+    },
+    "watched_symbols": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "backtesting",
+    "exchanges",
+    "services",
+    "notification"
+  ],
+  "additionalProperties": true
+}

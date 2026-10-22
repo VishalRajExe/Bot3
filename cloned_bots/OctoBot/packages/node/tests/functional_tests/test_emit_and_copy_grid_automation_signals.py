@@ -1,0 +1,844 @@
+#  This file is part of OctoBot Node (https://github.com/Drakkar-Software/OctoBot-Node)
+#  Copyright (c) 2025 Drakkar-Software, All rights reserved.
+#
+#  OctoBot is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 3.0 of the License, or (at your
+#  option) any later version.
+#
+#  OctoBot is distributed in the hope that it will be useful, but WITHOUT ANY
+#  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License along with
+#  OctoBot. If not, see https://www.gnu.org/licenses/.
+import asyncio
+import datetime
+import decimal
+import json
+import logging
+import mock
+import os
+import re
+import tempfile
+import time
+import typing
+
+import pytest
+import starlette.routing as starlette_routing_module
+import uvicorn
+
+import octobot_protocol.models as octobot_protocol_models
+import starfish_server.config.schema as starfish_server_config_schema
+import starfish_server.storage.filesystem as starfish_filesystem_storage_module
+import starfish_sharing as starfish_sharing_module
+
+from .util import exchange_account_elements_access as exchange_account_elements_access_module
+from .util import grid_workflow as grid_sim_util
+from .util import price_mocks as price_mocks_module
+from .util import user_action_assertions as user_action_assertions_module
+from .util import workflow_common as workflow_common_module
+
+import octobot.community.authentication as community_authentication_module
+import octobot.community.local_authenticator as local_authenticator_module
+import octobot_node.config
+import octobot_node.constants as node_constants_module
+import octobot_node.scheduler.automations.automation_states_loader as automation_states_loader_module
+import octobot_node.scheduler.workflows_util as workflows_util_module
+import octobot_commons.os_util as commons_os_util_module
+import octobot_copy.constants as octobot_copy_constants_module
+import octobot_flow.entities as octobot_flow_entities
+import octobot_flow.repositories.community as octobot_flow_repositories_community_module
+import octobot_flow.repositories.community.trading_signals_channel as trading_signals_channel_module
+import octobot_flow.repositories.exchange as octobot_flow_repositories_exchange_module
+import octobot_node.scheduler
+import octobot_node.scheduler.internal_trading_signals as internal_trading_signals_module
+import octobot_node.scheduler.tasks
+import octobot_sync.constants as octobot_sync_constants_module
+import octobot_sync.server as octobot_sync_server_module
+import octobot_sync.sync.collections as sync_collections_module
+import octobot_trading.enums as trading_enums_module
+
+from tests.scheduler import temp_dbos_scheduler
+
+_COPY_AUTOMATION_ID = "b2c3d4e5-f6a7-4890-b123-456789abcdef"
+_SHARED_STRATEGY_ID = "functional_test_copy_strategy"
+
+_MASTER_INIT_USDC = 10000.0
+_COPY_INIT_USDC = 2000.0
+
+_T_ENQUEUE_SECONDS = 5.0
+_T_GRID_SECONDS = workflow_common_module.functional_timeout_seconds(25.0)
+_T_BOOTSTRAP_COPY_SECONDS = workflow_common_module.functional_timeout_seconds(25.0)
+_T_POST_SHOCK_SECONDS = workflow_common_module.functional_timeout_seconds(55.0)
+_T_STOP_SEND_SECONDS = 5.0
+_T_STOP_COMPLETE_SECONDS = workflow_common_module.functional_timeout_seconds(15.0)
+
+_D_DECIMAL_INCREMENT = decimal.Decimal(str(grid_sim_util.GRID_INCREMENT))
+
+# Fixed 32-byte secret (hex) for local Starfish identity-encrypted collections; not used outside this test.
+_FUNCTIONAL_TEST_SYNC_ENCRYPTION_SECRET = "0123456789abcdef" * 4
+
+
+_DK_NAMESPACE = "dk"
+
+# Mirrors Infra/sync/server/drakkar_sync/apps/dk_spaces/collections.py's collection set
+# (see octobot_sync.artifacts' module docstring).
+_DK_SIGNAL_COLLECTIONS = [
+    sync_collections_module.CollectionConfig(
+        name="spaces",
+        storagePath="user/{identity}/_spaces",
+        readRoles=["self"],
+        writeRoles=["self"],
+        encryption="none",
+        maxBodyBytes=octobot_sync_constants_module.MAX_BODY_SIZE_PRIVATE,
+    ),
+    sync_collections_module.CollectionConfig(
+        name="spaceregistry",
+        storagePath="spaces/{spaceId}/_access",
+        readRoles=["space:member"],
+        writeRoles=["space:owner"],
+        encryption="none",
+        maxBodyBytes=octobot_sync_constants_module.MAX_BODY_SIZE_PRIVATE,
+    ),
+    sync_collections_module.CollectionConfig(
+        name="spacekeyring",
+        storagePath="spaces/{spaceId}/_keyring",
+        readRoles=["space:member"],
+        writeRoles=["space:owner"],
+        encryption="none",
+        maxBodyBytes=octobot_sync_constants_module.MAX_BODY_SIZE_PRIVATE,
+    ),
+    sync_collections_module.CollectionConfig(
+        name="objindex",
+        storagePath="spaces/{spaceId}/objects/_index",
+        readRoles=["space:member"],
+        writeRoles=["space:owner"],
+        encryption="none",
+        maxBodyBytes=octobot_sync_constants_module.MAX_BODY_SIZE_PRIVATE,
+    ),
+    sync_collections_module.CollectionConfig(
+        name="artifact-events",
+        storagePath="spaces/{spaceId}/artifact/versions/{version}/events",
+        readRoles=["space:member"],
+        writeRoles=["space:owner"],
+        encryption="delegated",
+        appendOnly=starfish_server_config_schema.AppendOnlyConfig(
+            type="by_timestamp",
+            requireAuthorSignature=True,
+        ),
+        maxBodyBytes=octobot_sync_constants_module.MAX_BODY_SIZE_SIGNAL,
+    ),
+]
+
+
+def _grid_functional_test_sync_config():
+    """Package default sync config plus a dk namespace for TradingSignalsRepository's
+    artifact-events publish/pull (see octobot_sync.artifacts)."""
+    base_config = sync_collections_module.DEFAULT_SYNC_CONFIG
+    assert base_config.namespaces is not None
+    dk_namespace = sync_collections_module.NamespaceConfig(collections=_DK_SIGNAL_COLLECTIONS)
+    return base_config.model_copy(
+        update={
+            "namespaces": {
+                **dict(base_config.namespaces),
+                _DK_NAMESPACE: dk_namespace,
+            }
+        }
+    )
+
+
+def _grid_functional_test_dk_role_enricher(object_store):
+    """The generic TOFU space-role enricher, matching Infra/sync's make_space_role_enricher."""
+    return starfish_sharing_module.make_registry_role_enricher(
+        object_store,
+        id_param="spaceId",
+        registry_path="spaces/{id}/_access",
+        owner_role="space:owner",
+        member_role="space:member",
+        allow_tofu=True,
+        id_pattern=re.compile(r"^[a-zA-Z0-9_-]+$"),
+    )
+
+
+def _post_fill_open_order_shape(buy_count: int, sell_count: int) -> bool:
+    """Accept expected post-shock ladder shapes after forced trigger and mirroring."""
+    return buy_count == 3 and sell_count == 1
+
+def _account_for_id(
+    *,
+    account_id: str,
+    master_account_id: str,
+    master_account: typing.Any,
+    copy_account_id: str,
+    copy_account: typing.Any,
+) -> typing.Any:
+    if account_id == master_account_id:
+        return master_account
+    if account_id == copy_account_id:
+        return copy_account
+    raise AssertionError(f"Unexpected account_id lookup: {account_id!r}")
+
+def _assert_open_limit_prices_match_reference(
+    reference_elements: typing.Any,
+    follower_elements: typing.Any,
+) -> None:
+    for side in (
+        trading_enums_module.TradeOrderSide.BUY,
+        trading_enums_module.TradeOrderSide.SELL,
+    ):
+        ref_prices = exchange_account_elements_access_module.sorted_open_limit_prices_from_elements(
+            reference_elements,
+            trade_order_side=side,
+        )
+        got_prices = exchange_account_elements_access_module.sorted_open_limit_prices_from_elements(
+            follower_elements,
+            trade_order_side=side,
+        )
+        assert ref_prices == got_prices, f"side={side!r} ref={ref_prices!s} follower={got_prices!s}"
+
+def _value_weighted_btc_usdc_shares(
+    content: dict[str, typing.Any],
+    *,
+    btc_usdc_close: decimal.Decimal,
+) -> dict[str, decimal.Decimal]:
+    """USDC notionals: ``btc_total * btc_usdc_close`` vs USDC total; shares sum to 1."""
+    for asset in ("BTC", "USDC"):
+        assert asset in content, f"missing portfolio row for {asset}"
+    btc_total = exchange_account_elements_access_module.portfolio_row_total(content["BTC"])
+    usdc_total = exchange_account_elements_access_module.portfolio_row_total(content["USDC"])
+    btc_notional_usdc = btc_total * btc_usdc_close
+    usdc_notional = usdc_total
+    total_notional = btc_notional_usdc + usdc_notional
+    assert total_notional > 0, "expected positive portfolio value in USDC"
+    return {
+        "BTC": btc_notional_usdc / total_notional,
+        "USDC": usdc_notional / total_notional,
+    }
+
+def _assert_btc_usdc_value_shares_match_reference(
+    reference_elements: typing.Any,
+    follower_elements: typing.Any,
+    *,
+    btc_usdc_close: decimal.Decimal,
+) -> None:
+    ref_content = exchange_account_elements_access_module.portfolio_content_from_elements(reference_elements)
+    follower_content = exchange_account_elements_access_module.portfolio_content_from_elements(follower_elements)
+    ref_shares = _value_weighted_btc_usdc_shares(ref_content, btc_usdc_close=btc_usdc_close)
+    follower_shares = _value_weighted_btc_usdc_shares(follower_content, btc_usdc_close=btc_usdc_close)
+    # ~3 percentage points slack (master vs copy notionals / float portfolio totals).
+    max_abs_diff = decimal.Decimal("0.03")
+    for asset in ("BTC", "USDC"):
+        delta = abs(ref_shares[asset] - follower_shares[asset])
+        assert delta <= max_abs_diff, (
+            f"{asset} value-share mismatch ref={ref_shares[asset]!s} "
+            f"follower={follower_shares[asset]!s} (abs diff {delta!s}, max {max_abs_diff!s}) "
+            f"at close={btc_usdc_close!s}"
+        )
+
+def _first_sell_limit_price(exchange_account_elements: typing.Any) -> decimal.Decimal:
+    sells = exchange_account_elements_access_module.sorted_open_limit_prices_from_elements(
+        exchange_account_elements,
+        trade_order_side=trading_enums_module.TradeOrderSide.SELL,
+    )
+    assert sells, "expected at least one open sell limit"
+    return sells[0]
+
+def _first_fetched_trading_signal(fetched: list[typing.Any]) -> octobot_flow_entities.TradingSignal:
+    assert fetched, "expected fetch_trading_signals to return at least one entry"
+    entry = fetched[0]
+    if isinstance(entry, list):
+        assert entry, "expected non-empty signals list in fetch payload"
+        return entry[-1]
+    return entry
+
+def _sorted_limit_prices_from_trading_signal_account(
+    trading_signal: octobot_flow_entities.TradingSignal,
+    *,
+    trade_order_side,
+) -> list[decimal.Decimal]:
+    return exchange_account_elements_access_module.sorted_open_limit_prices_from_protocol_orders(
+        trading_signal.account.orders,
+        trade_order_side=trade_order_side,
+    )
+
+async def _fetch_strategy_signals_from_sync(evm_address: str) -> list[typing.Any]:
+    async with local_authenticator_module.local_user_authenticator() as auth:
+        repository = octobot_flow_repositories_community_module.TradingSignalsRepository.from_community_repository(
+            octobot_flow_repositories_community_module.CommunityRepository(auth, evm_address)
+        )
+        return await repository.fetch_trading_signals(
+            [_SHARED_STRATEGY_ID],
+            octobot_copy_constants_module.DEFAULT_MISSED_SIGNALS_GRACE_ABORT_THRESHOLD,
+        )
+
+def _ladder_limit_prices_match_reference(
+    trading_signal: octobot_flow_entities.TradingSignal,
+    reference_exchange_account_elements: typing.Any,
+) -> tuple[bool, str]:
+    mismatch_parts: list[str] = []
+    for order_side in (
+        trading_enums_module.TradeOrderSide.BUY,
+        trading_enums_module.TradeOrderSide.SELL,
+    ):
+        reference_prices = exchange_account_elements_access_module.sorted_open_limit_prices_from_elements(
+            reference_exchange_account_elements,
+            trade_order_side=order_side,
+        )
+        pulled_prices = _sorted_limit_prices_from_trading_signal_account(
+            trading_signal,
+            trade_order_side=order_side,
+        )
+        if reference_prices != pulled_prices:
+            mismatch_parts.append(
+                f"{order_side.value}: ref={reference_prices!s} pulled={pulled_prices!s}"
+            )
+    if not mismatch_parts:
+        return True, ""
+    return False, "; ".join(mismatch_parts)
+
+async def _poll_fetched_trading_signal_until_ladder_matches(
+    evm_address: str,
+    reference_exchange_account_elements: typing.Any,
+    deadline_seconds: float,
+    failure_label: str,
+) -> octobot_flow_entities.TradingSignal:
+    """Wait until ``fetch_trading_signals`` matches the reference ladder (upload can lag the reader)."""
+    poll_interval = workflow_common_module.DEFAULT_GRID_WORKFLOW_POLL_INTERVAL_SECONDS
+    poll_deadline = time.monotonic() + deadline_seconds
+    last_mismatch = ""
+    while time.monotonic() < poll_deadline:
+        fetched_batch = await _fetch_strategy_signals_from_sync(evm_address)
+        if fetched_batch:
+            candidate_signal = _first_fetched_trading_signal(fetched_batch)
+            matches, detail = _ladder_limit_prices_match_reference(
+                candidate_signal,
+                reference_exchange_account_elements,
+            )
+            if matches:
+                return candidate_signal
+            last_mismatch = detail
+        await asyncio.sleep(poll_interval)
+    pytest.fail(f"Timed out waiting for {failure_label} ({last_mismatch})")
+
+async def _poll_state_reader_until(
+    scheduler,
+    automation_id: str,
+    predicate: typing.Callable[[typing.Any], bool],
+    deadline_seconds: float,
+    failure_label: str,
+) -> typing.Any:
+    poll_interval = workflow_common_module.DEFAULT_GRID_WORKFLOW_POLL_INTERVAL_SECONDS
+    poll_deadline = time.monotonic() + deadline_seconds
+    last_reader: typing.Any = None
+    while time.monotonic() < poll_deadline:
+        workflow_rows = await scheduler.INSTANCE.list_workflows_async()
+        for workflow_row in workflow_rows:
+            if automation_states_loader_module.get_automation_id(workflow_row) != automation_id:
+                continue
+            state_reader = automation_states_loader_module.get_automation_state_reader(workflow_row)
+            if state_reader is None:
+                continue
+            last_reader = state_reader
+            if predicate(state_reader):
+                return state_reader
+        await asyncio.sleep(poll_interval)
+    detail = "no reader"
+    if last_reader is not None:
+        elements = last_reader.state.automation.exchange_account_elements
+        detail = (
+            f"last counts={workflow_common_module.buy_sell_trade_counts_from_exchange_elements(elements)}"
+        )
+    pytest.fail(f"Timed out waiting for {failure_label} ({detail})")
+
+_ORDERS_SYNCHRONIZER_LOGGER = "OrdersSynchronizer"
+_FORBIDDEN_ORDERS_SYNC_SUBSTRINGS = (
+    "Cancelling mirrored order for replace",
+    "Cancelled mirrored order for replace",
+    "Mirrored orphan grace elapsed after",
+    "Cancelled mirrored orphan order",
+)
+
+def _assert_orders_synchronizer_no_mirror_cancel_or_grace_logs(caplog) -> None:
+    for record in caplog.records:
+        if record.name != _ORDERS_SYNCHRONIZER_LOGGER:
+            continue
+        message_text = record.getMessage()
+        for forbidden in _FORBIDDEN_ORDERS_SYNC_SUBSTRINGS:
+            assert forbidden not in message_text, (
+                f"unexpected OrdersSynchronizer log ({forbidden!r}): {message_text!r}"
+            )
+
+
+class TestEmitAndCopyGridAutomationSignals:
+    @pytest.mark.asyncio
+    async def test_emit_and_copy_grid_master_forced_trigger_copies_signals(
+        self, temp_dbos_scheduler, caplog
+    ):
+        """
+        Master grid uploads trading signals to a local OctoBot-Sync server; copy bootstraps via real
+        fetch_trading_signals from that server. After a forced trigger and price shock, the sync snapshot
+        matches the master's ladder; copy mirrors master via the internal trading-signal channel; both
+        automations stop cleanly.
+        """
+        # Deterministic ticker/OHLCV close; bumped later past the lowest sell so that limit can fill.
+        simulated_close: dict[str, float] = {"value": float(grid_sim_util.FIXED_BTC_USDC_CLOSE)}
+        patched_fetch_tickers = price_mocks_module.tickers_repository_fetch_tickers_btc_usdc_close_override(
+            lambda: simulated_close["value"]
+        )
+        patched_fetch_ohlcv = price_mocks_module.fetch_ohlcv_side_effect_for_close_price(
+            lambda: simulated_close["value"]
+        )
+
+        # EVM address — passed to CommunityRepository for signal emit/fetch.
+        evm_address = workflow_common_module.SIMULATOR_GRID_TEST_COMMUNITY_WALLET_ADDRESS
+        # Starfish user_id — used for all scheduler/protocol API calls.
+        user_id = workflow_common_module.SIMULATOR_GRID_TEST_COMMUNITY_USER_ID
+        master_account_id = "functional_master_emit_account"
+        copy_account_id = "functional_copy_emit_account"
+        master_user_action = grid_sim_util.build_create_grid_user_action(
+            account_id=master_account_id,
+            name="test_master_emit_grid",
+            strategy_id=_SHARED_STRATEGY_ID,
+            emit_signals=True,
+        )
+        copy_user_action = grid_sim_util.build_create_copy_follower_user_action(
+            automation_id=_COPY_AUTOMATION_ID,
+            account_id=copy_account_id,
+            name="test_copy_grid_follower",
+            strategy_id=_SHARED_STRATEGY_ID,
+        )
+
+        await internal_trading_signals_module.subscribe_internal_trading_signal_consumer()
+        try:
+            with tempfile.TemporaryDirectory() as tmp_root:
+                sync_data_dir = os.path.join(tmp_root, "sync_data")
+                os.makedirs(sync_data_dir, exist_ok=True)
+                wallet_file_path = os.path.join(tmp_root, "wallets.json")
+                previous_sync_data_dir = os.environ.get("SYNC_DATA_DIR")
+                os.environ["SYNC_DATA_DIR"] = sync_data_dir
+
+                listen_port = commons_os_util_module.find_first_free_listen_port_after_base(
+                    "127.0.0.1",
+                    31000,
+                    max_offset=256,
+                )
+                sync_url = f"http://127.0.0.1:{listen_port}"
+
+                # A user ``~/.octobot/collections.json`` can omit ``namespaces``; then
+                # ``NamespaceRewriteMiddleware`` is not applied and Starfish paths
+                # ``/octobot/v1/...`` never match (HTTP 404). Use the package default
+                # so the ``octobot`` namespace and rewrite are always active.
+                #
+                # A second FilesystemObjectStore on the same SYNC_DATA_DIR backs the dk
+                # role_enricher, so TOFU role reads see what the server just wrote.
+                dk_role_enricher_store = starfish_filesystem_storage_module.FilesystemObjectStore(
+                    starfish_filesystem_storage_module.FilesystemStorageOptions(base_dir=sync_data_dir)
+                )
+                with mock.patch(
+                    "octobot_sync.app.sync.load_sync_config",
+                    return_value=_grid_functional_test_sync_config(),
+                ):
+                    sync_asgi_app = octobot_sync_server_module.build_default_sync_app(
+                        is_allowed_user_id=lambda _address: True,
+                        role_enricher=_grid_functional_test_dk_role_enricher(dk_role_enricher_store),
+                    )
+                    # StarfishClient builds URLs as ``{base}/sync/v1/{namespace}/...``.
+                    # Mount sync_asgi_app under /sync to match the SYNC_MOUNT_PATH prefix.
+                    mounted_app = starlette_routing_module.Router(
+                        routes=[starlette_routing_module.Mount("/sync", app=sync_asgi_app)]
+                    )
+                    uvicorn_server = uvicorn.Server(
+                        uvicorn.Config(
+                            mounted_app,
+                            host="127.0.0.1",
+                            port=listen_port,
+                            log_level="warning",
+                        )
+                    )
+                serve_task = asyncio.create_task(uvicorn_server.serve())
+                await asyncio.sleep(0.25)
+                try:
+                    with (
+                        mock.patch("octobot.constants.WALLET_STORAGE_BACKEND", "file"),
+                        mock.patch("octobot.constants.WALLET_FILE_PATH", wallet_file_path),
+                        mock.patch("octobot.constants.SYNC_SERVER_URL", sync_url),
+                    ):
+                        # Seed wallet used by sync client + automation tasks (same key as SIMULATOR_GRID_TEST_*).
+                        async with local_authenticator_module.local_user_authenticator() as seed_auth:
+                            seed_auth.import_wallet(
+                                workflow_common_module.SIMULATOR_GRID_TEST_PRIVATE_KEY,
+                                workflow_common_module.SIMULATOR_GRID_TEST_WALLET_PASSPHRASE,
+                                None,
+                                True,
+                            )
+                        # Persistent auth singleton so CommunityRepository.user_id_to_evm() resolves correctly when
+                        # translating the Starfish user_id → EVM address for
+                        # auth_details["wallet_address"] (needed by CommunityRepository inside the job).
+                        auth_config = local_authenticator_module.get_stateless_configuration()
+                        auth_instance_for_singleton = community_authentication_module.CommunityAuthentication(
+                            config=auth_config,
+                            use_as_singleton=False,
+                        )
+                        master_account = workflow_common_module.protocol_account_for_functional(
+                            account_id=master_account_id,
+                            usdc_total=_MASTER_INIT_USDC,
+                            account_name="Master emit functional account",
+                        )
+                        copy_account = workflow_common_module.protocol_account_for_functional(
+                            account_id=copy_account_id,
+                            usdc_total=_COPY_INIT_USDC,
+                            account_name="Copy emit functional account",
+                        )
+
+                        def _functional_seed_strategy_for_emit_copy_test(_wallet_address, stored_item_id):
+                            if stored_item_id == _SHARED_STRATEGY_ID:
+                                return grid_sim_util.seeded_grid_strategy_for_functional_wallet(
+                                    stored_strategy_id=_SHARED_STRATEGY_ID,
+                                )
+                            if stored_item_id == grid_sim_util.SIMULATOR_COPY_FOLLOWER_STORED_STRATEGY_ID:
+                                return grid_sim_util.seeded_copy_follower_strategy_for_functional_wallet(
+                                    copy_master_strategy_id=_SHARED_STRATEGY_ID,
+                                )
+                            raise AssertionError(
+                                f"unexpected strategy id for functional seed: {stored_item_id!r}"
+                            )
+
+                        with (
+                            mock.patch.object(
+                                community_authentication_module.CommunityAuthentication,
+                                "instance",
+                                return_value=auth_instance_for_singleton,
+                            ),
+                            mock.patch.object(
+                                octobot_flow_repositories_exchange_module.TickersRepository,
+                                "fetch_tickers",
+                                new=patched_fetch_tickers,
+                            ),
+                            mock.patch.object(
+                                octobot_flow_repositories_exchange_module.OhlcvRepository,
+                                "fetch_ohlcv",
+                                side_effect=patched_fetch_ohlcv,
+                            ),
+                            mock.patch(
+                                "octobot_sync.sync.collection_providers.StrategyProvider.instance",
+                                return_value=mock.Mock(
+                                    get_item=mock.Mock(
+                                        side_effect=_functional_seed_strategy_for_emit_copy_test,
+                                    ),
+                                ),
+                            ),
+                            mock.patch(
+                                "octobot_sync.sync.collection_providers.AccountProvider.instance",
+                                return_value=mock.Mock(
+                                    get_item=mock.Mock(
+                                        side_effect=lambda _wallet, account_id: _account_for_id(
+                                            account_id=account_id,
+                                            master_account_id=master_account_id,
+                                            master_account=master_account,
+                                            copy_account_id=copy_account_id,
+                                            copy_account=copy_account,
+                                        )
+                                    ),
+                                    get_exchange_config=mock.Mock(
+                                        return_value=workflow_common_module.protocol_exchange_config_for_grid_functional(),
+                                    ),
+                                ),
+                            ),
+                            mock.patch.object(octobot_node.config.settings, "TASKS_SERVER_RSA_PRIVATE_KEY", None),
+                            mock.patch.object(octobot_node.config.settings, "TASKS_SERVER_ECDSA_PRIVATE_KEY", None),
+                        ):
+                            caplog.set_level(logging.INFO)
+
+                            # Seed trading state as CreateAccountActionExecutor would; persist_account_trading requires it.
+                            workflow_common_module.seed_empty_account_trading_state(
+                                user_id, master_account_id
+                            )
+                            workflow_common_module.seed_empty_account_trading_state(
+                                user_id, copy_account_id
+                            )
+
+                            # Step 1 — enqueue master emitting grid signals (pushes to local sync server).
+                            try:
+                                await asyncio.wait_for(
+                                    workflow_common_module.enqueue_user_action_workflow_and_await_terminal_result(
+                                        temp_dbos_scheduler,
+                                        master_user_action,
+                                        user_id,
+                                    ),
+                                    timeout=_T_ENQUEUE_SECONDS,
+                                )
+                            except TimeoutError as exc:
+                                raise AssertionError("execute_user_action timed out enqueueing master workflow") from exc
+
+                            await user_action_assertions_module.assert_user_action_selector_completed_automation_create(
+                                user_id=user_id,
+                                user_action_id=master_user_action.id,
+                                expected_workflow_id=None,
+                            )
+
+                            baseline_master_reader = await _poll_state_reader_until(
+                                temp_dbos_scheduler,
+                                user_action_assertions_module.resolve_create_automation_metadata_id(
+                                    master_user_action,
+                                ),
+                                lambda reader: grid_sim_util.is_simulator_grid_baseline_at_least_one_trade(
+                                    *workflow_common_module.buy_sell_trade_counts_from_exchange_elements(
+                                        reader.state.automation.exchange_account_elements
+                                    )
+                                ),
+                                _T_GRID_SECONDS,
+                                "master baseline grid (2 buy, 2 sell, >=1 trade)",
+                            )
+                            baseline_master_elements = baseline_master_reader.state.automation.exchange_account_elements
+                            buy_b, sell_b, trade_b = workflow_common_module.buy_sell_trade_counts_from_exchange_elements(
+                                baseline_master_elements
+                            )
+                            assert grid_sim_util.is_simulator_grid_baseline_at_least_one_trade(
+                                buy_b, sell_b, trade_b
+                            )
+                            master_metadata = baseline_master_reader.state.automation.metadata
+                            master_automation_id = master_metadata.automation_id
+                            assert master_metadata.strategy_id == _SHARED_STRATEGY_ID
+                            assert master_metadata.emit_signals is True
+
+                            master_workflow_rows_for_user_action_selector = [
+                                workflow_row
+                                for workflow_row in await temp_dbos_scheduler.INSTANCE.list_workflows_async()
+                                if automation_states_loader_module.get_automation_id(workflow_row)
+                                == user_action_assertions_module.resolve_create_automation_metadata_id(
+                                    master_user_action,
+                                )
+                            ]
+                            assert master_workflow_rows_for_user_action_selector
+                            master_workflow_row_for_user_action_selector = max(
+                                master_workflow_rows_for_user_action_selector,
+                                key=lambda workflow_status: workflow_status.updated_at or 0,
+                            )
+                            await user_action_assertions_module.assert_user_action_selector_completed_automation_create(
+                                user_id=user_id,
+                                user_action_id=master_user_action.id,
+                                expected_workflow_id=master_workflow_row_for_user_action_selector.workflow_id,
+                            )
+
+                            bootstrap_fetched = await _fetch_strategy_signals_from_sync(evm_address)
+                            bootstrap_signal = _first_fetched_trading_signal(bootstrap_fetched)
+                            assert bootstrap_signal.strategy_id == _SHARED_STRATEGY_ID
+                            bootstrap_account = bootstrap_signal.account
+                            assert bootstrap_account.copied_assets, (
+                                "bootstrap signal should snapshot portfolio copied_assets"
+                            )
+                            assert {"BTC", "USDC"} == {
+                                copied_asset.name for copied_asset in bootstrap_account.copied_assets
+                            }
+                            assert bootstrap_account.orders, "bootstrap signal should include open ladder orders"
+                            assert len(bootstrap_account.orders) == 4
+
+                            # Step 2 — enqueue copy (pulls bootstrap snapshot from server).
+                            try:
+                                await asyncio.wait_for(
+                                    workflow_common_module.enqueue_user_action_workflow_and_await_terminal_result(
+                                        temp_dbos_scheduler,
+                                        copy_user_action,
+                                        user_id,
+                                    ),
+                                    timeout=_T_ENQUEUE_SECONDS,
+                                )
+                            except TimeoutError as exc:
+                                raise AssertionError("execute_user_action timed out enqueueing copy workflow") from exc
+
+                            listed_after_copy = await octobot_node.scheduler.SCHEDULER.list_user_actions(user_id)
+                            by_id_after_copy = user_action_assertions_module.merge_user_actions_latest_per_id(listed_after_copy)
+                            assert master_user_action.id in by_id_after_copy
+                            assert copy_user_action.id in by_id_after_copy
+                            master_after_copy = by_id_after_copy[master_user_action.id]
+                            copy_row = by_id_after_copy[copy_user_action.id]
+                            assert master_after_copy.status == octobot_protocol_models.UserActionStatus.COMPLETED
+                            assert copy_row.status == octobot_protocol_models.UserActionStatus.COMPLETED
+                            master_inner_after_copy = master_after_copy.result.actual_instance
+                            copy_inner = copy_row.result.actual_instance
+                            assert isinstance(
+                                master_inner_after_copy,
+                                octobot_protocol_models.AutomationActionResult,
+                            )
+                            assert isinstance(copy_inner, octobot_protocol_models.AutomationActionResult)
+                            assert (
+                                master_inner_after_copy.result_type
+                                == octobot_protocol_models.UserActionResultType.AUTOMATION
+                            )
+                            assert copy_inner.result_type == octobot_protocol_models.UserActionResultType.AUTOMATION
+                            user_action_assertions_module.workflow_row_id_matches_user_action_selector_created_automation_id(
+                                workflow_row_id=master_workflow_row_for_user_action_selector.workflow_id,
+                                user_action_selector_created_automation_id=master_inner_after_copy.created_automation_id,
+                            )
+                            assert copy_inner.created_automation_id
+                            assert len(copy_inner.created_automation_id) > 0
+                            assert copy_inner.error_details is None
+                            assert copy_inner.error_message is None
+
+                            copy_reader = await _poll_state_reader_until(
+                                temp_dbos_scheduler,
+                                _COPY_AUTOMATION_ID,
+                                lambda reader: grid_sim_util.is_simulator_grid_baseline_at_least_one_trade(
+                                    *workflow_common_module.buy_sell_trade_counts_from_exchange_elements(
+                                        reader.state.automation.exchange_account_elements
+                                    )
+                                ),
+                                _T_BOOTSTRAP_COPY_SECONDS,
+                                "copy baseline grid mirroring master",
+                            )
+                            _assert_open_limit_prices_match_reference(
+                                baseline_master_reader.state.automation.exchange_account_elements,
+                                copy_reader.state.automation.exchange_account_elements,
+                            )
+                            _assert_btc_usdc_value_shares_match_reference(
+                                baseline_master_reader.state.automation.exchange_account_elements,
+                                copy_reader.state.automation.exchange_account_elements,
+                                btc_usdc_close=decimal.Decimal(str(simulated_close["value"])),
+                            )
+
+                            copy_workflow_rows_for_user_action_selector = [
+                                workflow_row
+                                for workflow_row in await temp_dbos_scheduler.INSTANCE.list_workflows_async()
+                                if automation_states_loader_module.get_automation_id(workflow_row)
+                                == _COPY_AUTOMATION_ID
+                            ]
+                            assert copy_workflow_rows_for_user_action_selector
+                            copy_workflow_row_for_user_action_selector = max(
+                                copy_workflow_rows_for_user_action_selector,
+                                key=lambda workflow_status: workflow_status.updated_at or 0,
+                            )
+                            await user_action_assertions_module.assert_user_action_selector_completed_automation_create(
+                                user_id=user_id,
+                                user_action_id=copy_user_action.id,
+                                expected_workflow_id=copy_workflow_row_for_user_action_selector.workflow_id,
+                            )
+
+                            caplog.clear()
+
+                            # Step 3 — raise mock spot between first sell and neighbour; force-trigger master DAG.
+                            first_sell_price = _first_sell_limit_price(baseline_master_elements)
+                            simulated_close["value"] = float(
+                                first_sell_price + _D_DECIMAL_INCREMENT / decimal.Decimal("2")
+                            )
+
+                            try:
+                                await asyncio.wait_for(
+                                    octobot_node.scheduler.tasks.send_forced_trigger_to_automation(
+                                        master_automation_id
+                                    ),
+                                    timeout=_T_STOP_SEND_SECONDS,
+                                )
+                            except TimeoutError as exc:
+                                raise AssertionError(
+                                    "send_forced_trigger_to_automation(master) timed out"
+                                ) from exc
+
+                            # Step 4 — ladder refresh + emit; copy follows internal trading-signal notifications.
+                            master_reader = await _poll_state_reader_until(
+                                temp_dbos_scheduler,
+                                master_automation_id,
+                                lambda reader: _post_fill_open_order_shape(
+                                    *workflow_common_module.buy_sell_trade_counts_from_exchange_elements(
+                                        reader.state.automation.exchange_account_elements
+                                    )[:2],
+                                ),
+                                _T_POST_SHOCK_SECONDS,
+                                "master post-shock ladder (3 buy, 1 sell open)",
+                            )
+
+                            copy_reader = await _poll_state_reader_until(
+                                temp_dbos_scheduler,
+                                _COPY_AUTOMATION_ID,
+                                lambda reader: _post_fill_open_order_shape(
+                                    *workflow_common_module.buy_sell_trade_counts_from_exchange_elements(
+                                        reader.state.automation.exchange_account_elements
+                                    )[:2],
+                                ),
+                                _T_POST_SHOCK_SECONDS,
+                                "copy post-signal ladder (3 buy, 1 sell open)",
+                            )
+
+                            _assert_open_limit_prices_match_reference(
+                                master_reader.state.automation.exchange_account_elements,
+                                copy_reader.state.automation.exchange_account_elements,
+                            )
+                            _assert_btc_usdc_value_shares_match_reference(
+                                master_reader.state.automation.exchange_account_elements,
+                                copy_reader.state.automation.exchange_account_elements,
+                                btc_usdc_close=decimal.Decimal(str(simulated_close["value"])),
+                            )
+
+                            master_post_elements = master_reader.state.automation.exchange_account_elements
+                            await _poll_fetched_trading_signal_until_ladder_matches(
+                                evm_address,
+                                master_post_elements,
+                                deadline_seconds=_T_POST_SHOCK_SECONDS,
+                                failure_label="sync snapshot ladder vs master post-shock",
+                            )
+
+                            _assert_orders_synchronizer_no_mirror_cancel_or_grace_logs(caplog)
+
+                            # Step 5 — priority-stop both workflows.
+                            for automation_id in (master_automation_id, _COPY_AUTOMATION_ID):
+                                matching_parent_id = None
+                                workflow_rows_for_stop = await temp_dbos_scheduler.INSTANCE.list_workflows_async()
+                                for workflow_row in sorted(
+                                    workflow_rows_for_stop,
+                                    key=lambda workflow_status: workflow_status.updated_at or 0,
+                                    reverse=True,
+                                ):
+                                    if automation_states_loader_module.get_automation_id(workflow_row) != automation_id:
+                                        continue
+                                    matching_parent_id = workflow_row.workflow_id[
+                                        : node_constants_module.PARENT_WORKFLOW_ID_LENGTH
+                                    ]
+                                    break
+                                assert matching_parent_id is not None
+                                stop_user_action = workflow_common_module.build_stop_user_action(
+                                    automation_id=matching_parent_id,
+                                    user_action_id=f"ua-stop-{automation_id}",
+                                )
+                                try:
+                                    await asyncio.wait_for(
+                                        workflow_common_module.enqueue_user_action_workflow_and_await_terminal_result(
+                                            temp_dbos_scheduler,
+                                            stop_user_action,
+                                            user_id,
+                                        ),
+                                        timeout=_T_STOP_SEND_SECONDS,
+                                    )
+                                except TimeoutError as exc:
+                                    raise AssertionError(
+                                        f"execute_user_action stop timed out for {automation_id}"
+                                    ) from exc
+
+                            await user_action_assertions_module.assert_user_action_selector_completed_automation_stop(
+                                user_id=user_id,
+                                user_action_id=f"ua-stop-{master_automation_id}",
+                            )
+                            await user_action_assertions_module.assert_user_action_selector_completed_automation_stop(
+                                user_id=user_id,
+                                user_action_id=f"ua-stop-{_COPY_AUTOMATION_ID}",
+                            )
+
+                            for automation_id in (master_automation_id, _COPY_AUTOMATION_ID):
+                                final_text = await workflow_common_module.wait_for_stop_success_output(
+                                    temp_dbos_scheduler,
+                                    automation_id,
+                                    _T_STOP_COMPLETE_SECONDS,
+                                )
+                                parsed_final = workflow_common_module.parse_automation_workflow_output(final_text)
+                                assert parsed_final.error is None
+                                final_job = workflow_common_module.job_description_dict_from_output(parsed_final)
+                                assert final_job["state"]["automation"]["post_actions"]["stop_automation"] is True
+                finally:
+                    uvicorn_server.should_exit = True
+                    await serve_task
+                    if previous_sync_data_dir is None:
+                        os.environ.pop("SYNC_DATA_DIR", None)
+                    else:
+                        os.environ["SYNC_DATA_DIR"] = previous_sync_data_dir
+
+        finally:
+            await trading_signals_channel_module.shutdown_internal_trading_signal_channel()

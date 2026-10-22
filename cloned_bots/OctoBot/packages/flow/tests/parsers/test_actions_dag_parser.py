@@ -1,0 +1,308 @@
+import pytest
+
+import octobot_flow.entities
+import octobot_flow.errors
+import octobot_flow.parsers.actions_dag_parser as actions_dag_parser
+import octobot_trading.constants as trading_constants
+
+
+class TestResolveParamDependencies:
+    """`_resolve_param_dependencies`: top-level dataclass fields."""
+
+    def test_alias_resolves_to_order_amount(self):
+        params = actions_dag_parser.ActionsDAGParserParams.from_dict({
+            "ORDER_AMOUNT": 1.5,
+            "BLOCKCHAIN_FROM_AMOUNT": f"{actions_dag_parser.PARAM_DEPENDENCY_PREFIX}ORDER_AMOUNT",
+        })
+        assert params.BLOCKCHAIN_FROM_AMOUNT == 1.5
+        assert params.ORDER_AMOUNT == 1.5
+
+    def test_two_hop_chain(self):
+        params = actions_dag_parser.ActionsDAGParserParams.from_dict({
+            "ORDER_AMOUNT": 2.0,
+            "BLOCKCHAIN_FROM_AMOUNT": f"{actions_dag_parser.PARAM_DEPENDENCY_PREFIX}ORDER_AMOUNT",
+            "BLOCKCHAIN_TO_AMOUNT": f"{actions_dag_parser.PARAM_DEPENDENCY_PREFIX}BLOCKCHAIN_FROM_AMOUNT",
+        })
+        assert params.BLOCKCHAIN_TO_AMOUNT == 2.0
+        assert params.BLOCKCHAIN_FROM_AMOUNT == 2.0
+
+    def test_target_name_is_case_insensitive(self):
+        prefix = actions_dag_parser.PARAM_DEPENDENCY_PREFIX
+        params = actions_dag_parser.ActionsDAGParserParams.from_dict({
+            "ORDER_AMOUNT": 4.0,
+            "BLOCKCHAIN_FROM_AMOUNT": f"{prefix}order_amount",
+            "BLOCKCHAIN_TO_AMOUNT": f"{prefix}Blockchain_From_Amount",
+        })
+        assert params.BLOCKCHAIN_FROM_AMOUNT == 4.0
+        assert params.BLOCKCHAIN_TO_AMOUNT == 4.0
+
+
+class TestResolveParamDependenciesInMapping:
+    """`_resolve_param_dependencies_in_mapping`: dict-valued fields (nested dicts)."""
+
+    def test_resolves_inside_dict_field(self):
+        prefix = actions_dag_parser.PARAM_DEPENDENCY_PREFIX
+        params = actions_dag_parser.ActionsDAGParserParams.from_dict({
+            "BLOCKCHAIN_BALANCE_ADDRESS": "0xabc",
+            "ORDER_EXTRA_PARAMS": {
+                "address_to": f"{prefix}BLOCKCHAIN_BALANCE_ADDRESS",
+            },
+        })
+        assert params.ORDER_EXTRA_PARAMS == {"address_to": "0xabc"}
+
+    def test_resolves_inside_dict_field_case_insensitive_target(self):
+        prefix = actions_dag_parser.PARAM_DEPENDENCY_PREFIX
+        params = actions_dag_parser.ActionsDAGParserParams.from_dict({
+            "BLOCKCHAIN_BALANCE_ADDRESS": "0xdef",
+            "ORDER_EXTRA_PARAMS": {
+                "address_to": f"{prefix}blockchain_balance_address",
+            },
+        })
+        assert params.ORDER_EXTRA_PARAMS == {"address_to": "0xdef"}
+
+    def test_resolves_nested_dict_values(self):
+        prefix = actions_dag_parser.PARAM_DEPENDENCY_PREFIX
+        params = actions_dag_parser.ActionsDAGParserParams.from_dict({
+            "ORDER_AMOUNT": 3.0,
+            "CONTENT": {
+                "nested": {
+                    "amount": f"{prefix}ORDER_AMOUNT",
+                },
+            },
+        })
+        assert params.CONTENT == {"nested": {"amount": 3.0}}
+
+
+class TestResolveParamDependencyStringValue:
+    """`_resolve_param_dependency_string_value`: invalid or deferred resolution."""
+
+    def test_empty_suffix_raises(self):
+        with pytest.raises(octobot_flow.errors.InvalidAutomationActionError):
+            actions_dag_parser.ActionsDAGParserParams.from_dict({
+                "BLOCKCHAIN_FROM_AMOUNT": actions_dag_parser.PARAM_DEPENDENCY_PREFIX,
+            })
+
+    def test_malformed_extra_segments_raises(self):
+        with pytest.raises(octobot_flow.errors.InvalidAutomationActionError):
+            actions_dag_parser.ActionsDAGParserParams.from_dict({
+                "BLOCKCHAIN_FROM_AMOUNT": (
+                    f"{actions_dag_parser.PARAM_DEPENDENCY_PREFIX}ORDER_AMOUNT::extra"
+                ),
+            })
+
+    def test_unknown_target_raises(self):
+        with pytest.raises(octobot_flow.errors.InvalidAutomationActionError) as raised:
+            actions_dag_parser.ActionsDAGParserParams.from_dict({
+                "BLOCKCHAIN_FROM_AMOUNT": f"{actions_dag_parser.PARAM_DEPENDENCY_PREFIX}NOT_A_FIELD",
+            })
+        assert "NOT_A_FIELD" in str(raised.value)
+
+    def test_two_node_cycle_raises(self):
+        prefix = actions_dag_parser.PARAM_DEPENDENCY_PREFIX
+        with pytest.raises(octobot_flow.errors.InvalidAutomationActionError) as raised:
+            actions_dag_parser.ActionsDAGParserParams.from_dict({
+                "BLOCKCHAIN_FROM_AMOUNT": f"{prefix}BLOCKCHAIN_TO_AMOUNT",
+                "BLOCKCHAIN_TO_AMOUNT": f"{prefix}BLOCKCHAIN_FROM_AMOUNT",
+            })
+        assert "cycle" in str(raised.value).lower() or "unresolved" in str(raised.value).lower()
+
+
+class TestGetBlockchainAndSpecificConfigs:
+    """`get_blockchain_and_specific_configs`: unknown blockchain network."""
+
+    def test_invalid_blockchain_raises_invalid_automation_action_error(self):
+        params = actions_dag_parser.ActionsDAGParserParams.from_dict({})
+        invalid_blockchain = "invalid_blockchain_xyz"
+        with pytest.raises(octobot_flow.errors.InvalidAutomationActionError) as raised:
+            params.get_blockchain_and_specific_configs(invalid_blockchain)
+        assert str(raised.value) == f"Invalid blockchain: {invalid_blockchain}"
+        assert isinstance(raised.value.__cause__, KeyError)
+
+
+class TestParseWalletCleanupIfError:
+    """`parse` / `_parse_generic_actions`: no if_error wrapper after open wallet init."""
+
+    _wallet_address = "0x1234567890123456789012345678901234567890"
+    _wallet_private_key = (
+        "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+    )
+
+    def _simulated_blockchain_wallet_init_then_wait_params(self) -> dict:
+        return {
+            "ACTIONS": [
+                actions_dag_parser.ActionType.BLOCKCHAIN_WALLET_INIT.value,
+                actions_dag_parser.ActionType.WAIT.value,
+            ],
+            "BLOCKCHAIN_FROM": trading_constants.SIMULATED_BLOCKCHAIN_NETWORK,
+            "BLOCKCHAIN_FROM_ASSET": "ETH",
+            "BLOCKCHAIN_FROM_AMOUNT": 10.0,
+            "BLOCKCHAIN_FROM_ADDRESS": self._wallet_address,
+            "BLOCKCHAIN_FROM_PRIVATE_KEY": self._wallet_private_key,
+            "MIN_DELAY": 1.0,
+        }
+
+    def _extract_wait_action(
+        self,
+        actions_dag: octobot_flow.entities.ActionsDAG,
+    ) -> octobot_flow.entities.DSLScriptActionDetails:
+        wait_action = next(action for action in actions_dag.actions if action.id == "action_wait_2")
+        assert isinstance(wait_action, octobot_flow.entities.DSLScriptActionDetails)
+        return wait_action
+
+    def _wait_action_after_parse(self, params: dict) -> octobot_flow.entities.DSLScriptActionDetails:
+        return self._extract_wait_action(actions_dag_parser.ActionsDAGParser(params).parse())
+
+    def test_does_not_wrap_wait_when_close_wallet_on_exit_false(self):
+        params = {
+            **self._simulated_blockchain_wallet_init_then_wait_params(),
+            "BLOCKCHAIN_INIT_CLOSE_WALLET_ON_EXIT": False,
+        }
+        wait_action = self._wait_action_after_parse(params)
+        assert wait_action.dsl_script.startswith("wait(")
+        assert "if_error(" not in wait_action.dsl_script
+
+    def test_does_not_wrap_wait_when_close_wallet_on_exit_omitted(self):
+        wait_action = self._wait_action_after_parse(self._simulated_blockchain_wallet_init_then_wait_params())
+        assert wait_action.dsl_script.startswith("wait(")
+        assert "if_error(" not in wait_action.dsl_script
+
+    def test_does_not_wrap_when_close_wallet_on_exit_true(self):
+        params = {
+            **self._simulated_blockchain_wallet_init_then_wait_params(),
+            "BLOCKCHAIN_INIT_CLOSE_WALLET_ON_EXIT": True,
+        }
+        wait_action = self._wait_action_after_parse(params)
+        assert wait_action.dsl_script.startswith("wait(")
+        assert "if_error(" not in wait_action.dsl_script
+
+
+class TestCreateDslScriptFromTvFormatActionDetails:
+    def test_buy_market_action_details(self):
+        parser = actions_dag_parser.ActionsDAGParser({})
+        action_details = parser.create_dsl_script_from_tv_format_action_details(
+            "action_trade_1",
+            "buy",
+            {"SYMBOL": "BTC/USDC", "VOLUME": 0.01},
+        )
+        assert "market" in action_details.dsl_script
+        assert "buy" in action_details.dsl_script
+        assert "BTC/USDC" in action_details.dsl_script
+
+    def test_cancel_action_details(self):
+        parser = actions_dag_parser.ActionsDAGParser({})
+        action_details = parser.create_dsl_script_from_tv_format_action_details(
+            "action_cancel_1",
+            "cancel",
+            {"SYMBOL": "BTC/USDC"},
+        )
+        assert action_details.dsl_script.startswith("cancel_order(")
+        assert "BTC/USDC" in action_details.dsl_script
+
+
+class TestParseOrderSymbol:
+    _invalid_order_symbol = "invalid:symbol"
+
+    def test_get_reference_market_raises_invalid_automation_action_error(self):
+        params = actions_dag_parser.ActionsDAGParserParams.from_dict({
+            "ORDER_SYMBOL": self._invalid_order_symbol,
+        })
+        with pytest.raises(octobot_flow.errors.InvalidAutomationActionError) as raised:
+            params.get_reference_market()
+        assert self._invalid_order_symbol in str(raised.value)
+        assert isinstance(raised.value, octobot_flow.errors.ConfigurationError)
+        assert isinstance(raised.value.__cause__, (AttributeError, ValueError))
+
+
+class TestActionsDAGParserParseInvalidOrderSymbol:
+    _invalid_order_symbol = "invalid:symbol"
+
+    def _trade_params_with_invalid_symbol(self) -> dict:
+        return {
+            "ACTIONS": ["trade"],
+            "EXCHANGE_FROM": "binanceus",
+            "ORDER_SYMBOL": self._invalid_order_symbol,
+            "ORDER_AMOUNT": 1,
+            "ORDER_TYPE": "market",
+            "ORDER_SIDE": "BUY",
+            "SIMULATED_PORTFOLIO": {"BTC": 1},
+        }
+
+    def test_parse_raises_invalid_automation_action_error(self):
+        with pytest.raises(octobot_flow.errors.InvalidAutomationActionError) as raised:
+            actions_dag_parser.ActionsDAGParser(
+                self._trade_params_with_invalid_symbol()
+            ).parse()
+        assert self._invalid_order_symbol in str(raised.value)
+
+
+class TestCreateGenericActionUnknownAction:
+    def test_unknown_action_raises_invalid_automation_action_error(self):
+        unknown_action = "not_a_real_action"
+        with pytest.raises(octobot_flow.errors.InvalidAutomationActionError) as raised:
+            actions_dag_parser.ActionsDAGParser({"ACTIONS": [unknown_action]}).parse()
+        assert unknown_action in str(raised.value)
+
+
+class TestParseLoopUntilOrderClosed:
+    _exchange = "binanceus"
+
+    def _loop_until_order_closed_params(self, **overrides) -> dict:
+        params = {
+            "ACTIONS": [
+                actions_dag_parser.ActionType.TRADE.value,
+                actions_dag_parser.ActionType.LOOP_UNTIL_ORDER_CLOSED.value,
+            ],
+            "EXCHANGE_FROM": self._exchange,
+            "ORDER_SYMBOL": "ETH/BTC",
+            "ORDER_AMOUNT": 1,
+            "ORDER_TYPE": "market",
+            "ORDER_SIDE": "BUY",
+            "SIMULATED_PORTFOLIO": {"BTC": 1},
+            "ORDER_EXCHANGE_ID": "order-123",
+            "LOOP_INTERVAL": 50,
+            "LOOP_TIMEOUT": 100,
+            "LOOP_MAX_ATTEMPTS": 5,
+        }
+        params.update(overrides)
+        return params
+
+    def _loop_action_dsl(self, params: dict) -> str:
+        actions_dag = actions_dag_parser.ActionsDAGParser(params).parse()
+        loop_action = next(
+            action for action in actions_dag.actions if action.id == "action_loop_until_order_closed_2"
+        )
+        assert isinstance(loop_action, octobot_flow.entities.DSLScriptActionDetails)
+        return loop_action.dsl_script
+
+    def test_emits_max_retry_interval_when_loop_interval_max_set(self):
+        dsl_script = self._loop_action_dsl(
+            self._loop_until_order_closed_params(LOOP_INTERVAL_MAX=70)
+        )
+        assert "max_retry_interval=70" in dsl_script
+        assert "return_remaining_time=True" in dsl_script
+        assert ", 50.0, max_retry_interval=70.0," in dsl_script
+
+    def test_emits_max_retry_interval_when_loop_interval_max_is_string(self):
+        # JSON / task templates pass numeric params as strings; lexicographic "30" > "5" is False.
+        dsl_script = self._loop_action_dsl(
+            self._loop_until_order_closed_params(LOOP_INTERVAL="5", LOOP_INTERVAL_MAX="30")
+        )
+        assert ", 5.0, max_retry_interval=30.0," in dsl_script
+
+    def test_emits_max_retry_interval_when_template_style_string_intervals(self):
+        dsl_script = self._loop_action_dsl(
+            self._loop_until_order_closed_params(LOOP_INTERVAL="30", LOOP_INTERVAL_MAX="120")
+        )
+        assert ", 30.0, max_retry_interval=120.0," in dsl_script
+
+    def test_omits_max_retry_interval_without_loop_interval_max(self):
+        dsl_script = self._loop_action_dsl(self._loop_until_order_closed_params())
+        assert "max_retry_interval" not in dsl_script
+        assert ", 50.0, timeout=" in dsl_script
+
+    def test_loop_interval_max_less_than_loop_interval_raises(self):
+        with pytest.raises(octobot_flow.errors.InvalidAutomationActionError, match="LOOP_INTERVAL_MAX"):
+            actions_dag_parser.ActionsDAGParserParams.from_dict(
+                self._loop_until_order_closed_params(LOOP_INTERVAL=50, LOOP_INTERVAL_MAX=10)
+            )
+

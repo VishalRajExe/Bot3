@@ -1,0 +1,48 @@
+#  Drakkar-Software OctoBot-Sync
+#  Copyright (c) Drakkar-Software, All rights reserved.
+#
+#  This library is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU Lesser General Public
+#  License as published by the Free Software Foundation; either
+#  version 3.0 of the License, or (at your option) any later version.
+#
+#  This library is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public
+#  License along with this library.
+
+from octobot_sync.sync import collections
+from octobot_sync.sync.collections import (
+    load_sync_config,
+    is_replicable_collection,
+)
+
+import octobot_sync.sync.collection_backend as collection_backend
+import octobot_sync.sync.collection_providers as collection_providers
+
+AccountProvider = collection_providers.AccountProvider
+StrategyProvider = collection_providers.StrategyProvider
+BaseLocalCollectionStorage = collection_backend.BaseLocalCollectionStorage
+BaseLocalCollectionProvider = collection_backend.BaseLocalCollectionProvider
+CollectionStorageError = collection_backend.CollectionStorageError
+CollectionDecryptionError = collection_backend.CollectionDecryptionError
+CollectionFileFormatError = collection_backend.CollectionFileFormatError
+ItemNotFoundError = collection_backend.ItemNotFoundError
+DuplicateItemError = collection_backend.DuplicateItemError
+
+__all__ = [
+    "load_sync_config",
+    "is_replicable_collection",
+    "BaseLocalCollectionStorage",
+    "BaseLocalCollectionProvider",
+    "CollectionStorageError",
+    "CollectionDecryptionError",
+    "CollectionFileFormatError",
+    "ItemNotFoundError",
+    "DuplicateItemError",
+    "AccountProvider",
+    "StrategyProvider",
+]

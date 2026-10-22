@@ -1,0 +1,27 @@
+// Okx Futures Pairs Available Since 2022
+{
+  "exchange": {
+    "name": "okx",
+    "pair_whitelist": [
+      "APE/USDT:USDT",
+      "API3/USDT:USDT",
+      "APT/USDT:USDT",
+      "BNB/USDT:USDT",
+      "ETHW/USDT:USDT",
+      "GMT/USDT:USDT",
+      "KLAY/USDT:USDT",
+      "LOOKS/USDT:USDT",
+      "LUNA/USDT:USDT",
+      "LUNC/USDT:USDT",
+      "OP/USDT:USDT",
+      "SWEAT/USDT:USDT",
+      "TON/USDT:USDT",
+      "USTC/USDT:USDT"
+    ]
+  },
+  "pairlists": [
+    {
+      "method": "StaticPairList"
+    }
+  ]
+}

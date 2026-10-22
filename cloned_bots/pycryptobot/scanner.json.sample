@@ -1,0 +1,14 @@
+{
+    "coinbase" : {
+        "quote_currency": ["GBP", "USD"]
+    },
+    "coinbasepro" : {
+        "quote_currency": ["GBP", "USD"]
+    },
+    "binance" : {
+        "quote_currency": ["BUSD"]
+    },
+    "kucoin" : {
+        "quote_currency": ["USD"]
+    }
+}

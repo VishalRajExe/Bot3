@@ -1,0 +1,651 @@
+#  Drakkar-Software OctoBot-Tentacles
+#  Copyright (c) Drakkar-Software, All rights reserved.
+#
+#  Functional integration tests for predicted_order_book and market_making_volume (live BingX + Dexscreener + DefiLlama + Alchemy).
+
+import os
+import typing
+
+import dotenv
+import pytest
+
+import octobot_commons
+import octobot_commons.symbols.symbol_util as commons_symbols
+
+import tentacles.Trading.Mode.simple_market_making_trading_mode.api.api_handlers as api_handlers
+import tentacles.Trading.Mode.simple_market_making_trading_mode.api.constants as api_constants
+
+dotenv.load_dotenv(verbose=False)
+
+skip_without_alchemy_api_key = pytest.mark.skipif(
+    not os.getenv("ALCHEMY_API_KEY"),
+    reason="ALCHEMY_API_KEY not set",
+)
+
+
+BINGX_EXCHANGE_NAME = "bingx"
+DEXSCREENER_EXCHANGE_NAME = "dexscreener"
+DEFILLAMA_EXCHANGE_NAME = "defillama"
+ALCHEMY_EXCHANGE_NAME = "alchemy"
+BINGX_TRADING_PAIR = "BTC/USDT"
+DEX_TRADING_PAIR = "BTCB/USDT"
+
+BTCB_TOKEN_ADDRESS = "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c"
+WBNB_TOKEN_ADDRESS = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"
+USDT_TOKEN_ADDRESS = "0x55d398326f99059fF775485246999027B3197955"
+WBTC_TOKEN_ADDRESS = "0x0555E30da8f98308EdB960aa94C0Db47230d2B9c"
+
+BSC_NETWORK_NAME = "BEP20"
+BSC_DEX_NAME = "UNISWAP"
+BSC_DEX_SYMBOL_SUFFIX = (
+    f"{octobot_commons.NETWORK_SEPARATOR}{BSC_NETWORK_NAME}"
+    f"{octobot_commons.DEX_SEPARATOR}{BSC_DEX_NAME}"
+)
+DEX_BTCB_USDT_TRADING_PAIR = f"{DEX_TRADING_PAIR}{BSC_DEX_SYMBOL_SUFFIX}"
+BSC_ANY_DEX_SYMBOL_SUFFIX = (
+    f"{octobot_commons.NETWORK_SEPARATOR}{BSC_NETWORK_NAME}"
+    f"{octobot_commons.DEX_SEPARATOR}{octobot_commons.ANY_DEX_WILDCARD}"
+)
+DEX_BTCB_USDT_ANY_DEX_TRADING_PAIR = f"{DEX_TRADING_PAIR}{BSC_ANY_DEX_SYMBOL_SUFFIX}"
+BSC_NO_DEX_SYMBOL_SUFFIX = f"{octobot_commons.NETWORK_SEPARATOR}{BSC_NETWORK_NAME}"
+DEX_BTCB_USDT_ADDRESS_NO_DEX = (
+    f"{BTCB_TOKEN_ADDRESS}/{USDT_TOKEN_ADDRESS}{BSC_NO_DEX_SYMBOL_SUFFIX}"
+)
+DEX_BTCB_USDT_ADDRESS_ANY_DEX = (
+    f"{BTCB_TOKEN_ADDRESS}/{USDT_TOKEN_ADDRESS}{BSC_ANY_DEX_SYMBOL_SUFFIX}"
+)
+
+CROSS_PAIR_SYMBOL_FORMULA = (
+    f"price('{BTCB_TOKEN_ADDRESS}/{WBNB_TOKEN_ADDRESS}{BSC_DEX_SYMBOL_SUFFIX}')"
+    f"*price('{WBNB_TOKEN_ADDRESS}/{USDT_TOKEN_ADDRESS}{BSC_DEX_SYMBOL_SUFFIX}')"
+)
+CROSS_PAIR_ADDRESS_FORMULA = (
+    f'price("{BTCB_TOKEN_ADDRESS}/{WBNB_TOKEN_ADDRESS}{BSC_DEX_SYMBOL_SUFFIX}")'
+    f'*price("{WBNB_TOKEN_ADDRESS}/{USDT_TOKEN_ADDRESS}{BSC_DEX_SYMBOL_SUFFIX}")'
+)
+CROSS_PAIR_ANY_DEX_ADDRESS_FORMULA = (
+    f'price("{BTCB_TOKEN_ADDRESS}/{WBNB_TOKEN_ADDRESS}{BSC_ANY_DEX_SYMBOL_SUFFIX}")'
+    f'*price("{WBNB_TOKEN_ADDRESS}/{USDT_TOKEN_ADDRESS}{BSC_ANY_DEX_SYMBOL_SUFFIX}")'
+)
+DIRECT_WBTC_USDT_ADDRESS_FORMULA = (
+    f'price("{WBTC_TOKEN_ADDRESS}/{USDT_TOKEN_ADDRESS}{BSC_DEX_SYMBOL_SUFFIX}")'
+)
+
+WETH_BASE = "0x4200000000000000000000000000000000000006"
+USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+BASE_UNISWAPV3_SUFFIX = (
+    f"{octobot_commons.NETWORK_SEPARATOR}BASE"
+    f"{octobot_commons.DEX_SEPARATOR}UNISWAPV3"
+)
+ALCHEMY_WETH_USDC_TRADING_PAIR = f"{WETH_BASE}/{USDC_BASE}{BASE_UNISWAPV3_SUFFIX}"
+ALCHEMY_WETH_USDC_ADDRESS_FORMULA = f'price("{ALCHEMY_WETH_USDC_TRADING_PAIR}")'
+
+
+pytestmark = pytest.mark.asyncio
+
+
+def _bingx_exchange() -> dict:
+    return {
+        "id": "bingx-config",
+        "name": BINGX_EXCHANGE_NAME,
+        "exchange": BINGX_EXCHANGE_NAME,
+        "sandboxed": False,
+    }
+
+
+def _defillama_exchange() -> dict:
+    return {
+        "id": "defillama-config",
+        "name": DEFILLAMA_EXCHANGE_NAME,
+        "exchange": DEFILLAMA_EXCHANGE_NAME,
+        "sandboxed": False,
+    }
+
+
+def _alchemy_exchange() -> dict:
+    return {
+        "id": "alchemy-config",
+        "name": ALCHEMY_EXCHANGE_NAME,
+        "exchange": ALCHEMY_EXCHANGE_NAME,
+        "sandboxed": False,
+    }
+
+
+def _bingx_and_alchemy_exchanges() -> list[dict]:
+    return [_bingx_exchange(), _alchemy_exchange()]
+
+
+def _base_pair_settings(
+    trading_pair: str,
+    exchange: str,
+    reference_price_entries: list[dict],
+) -> dict:
+    return {
+        "trading_pair": trading_pair,
+        "exchange": exchange,
+        "reference_price": reference_price_entries,
+        "min_spread": 0.3,
+        "max_spread": 0.5,
+        "order_book_depth": {
+            "cumulated_volume_percent": 1,
+            "percent_daily_trading_volume": 0.45,
+        },
+        "bids_count": 10,
+        "asks_count": 10,
+        "orders_distribution": "linear",
+        "funds_distribution": "valley",
+        "max_base_budget": 0,
+        "max_quote_budget": 0,
+    }
+
+
+def _market_making_dispatch_request(
+    request_type: str,
+    exchanges: list[dict],
+    pair_settings: list[dict],
+) -> dict:
+    return {
+        "type": request_type,
+        "exchanges": exchanges,
+        "config": {
+            "name": "SimpleMarketMakingTradingMode",
+            "config": {
+                "configuration_type": "market_making",
+                "pair_settings": pair_settings,
+                "required_strategies": [],
+            },
+        },
+    }
+
+
+def _predicted_order_book_request(
+    exchanges: list[dict],
+    pair_settings: list[dict],
+) -> dict:
+    return _market_making_dispatch_request("predicted_order_book", exchanges, pair_settings)
+
+
+def _market_making_volume_request(
+    exchanges: list[dict],
+    pair_settings: list[dict],
+) -> dict:
+    return _market_making_dispatch_request("market_making_volume", exchanges, pair_settings)
+
+
+def _assert_successful_predicted_order_book(
+    body: typing.Any,
+    exchange: str,
+    symbol: str,
+) -> None:
+    assert exchange in body, f"expected exchange {exchange!r} in response, got keys: {list(body)}"
+    by_symbol = body[exchange]
+    assert symbol in by_symbol, f"expected symbol {symbol!r} for {exchange}, got keys: {list(by_symbol)}"
+    order_book = by_symbol[symbol]
+    if api_constants.ERROR_KEY in order_book:
+        pytest.fail(f"unexpected order book error for {exchange}/{symbol}: {order_book[api_constants.ERROR_KEY]}")
+    assert order_book[api_constants.PRICE_KEY] > 0
+    assert isinstance(order_book[api_constants.BIDS_KEY], list)
+    assert isinstance(order_book[api_constants.ASKS_KEY], list)
+    assert len(order_book[api_constants.BIDS_KEY]) > 0
+    assert len(order_book[api_constants.ASKS_KEY]) > 0
+    first_bid = order_book[api_constants.BIDS_KEY][0]
+    for key in (api_constants.PRICE_KEY, api_constants.AMOUNT_KEY, api_constants.TOTAL_KEY):
+        assert key in first_bid
+
+
+def _assert_successful_market_making_volume(
+    body: typing.Any,
+    exchange: str,
+    symbol: str,
+) -> None:
+    assert exchange in body, f"expected exchange {exchange!r} in response, got keys: {list(body)}"
+    by_symbol = body[exchange]
+    assert symbol in by_symbol, f"expected symbol {symbol!r} for {exchange}, got keys: {list(by_symbol)}"
+    per_symbol = by_symbol[symbol]
+    assert api_constants.VOLUME_KEY in per_symbol
+    assert api_constants.ERROR_KEY in per_symbol
+    if per_symbol[api_constants.ERROR_KEY]:
+        pytest.fail(
+            f"unexpected volume error for {exchange}/{symbol}: {per_symbol[api_constants.ERROR_KEY]}"
+        )
+    volume = per_symbol[api_constants.VOLUME_KEY]
+    assert isinstance(volume, dict)
+    base, quote = commons_symbols.parse_symbol(symbol).base_and_quote()
+    assert volume[base] > 0
+    assert volume[quote] > 0
+
+
+class TestDispatchMarketMakingRequestPredictedOrderBook:
+    async def test_bingx_spot_btc_usdt(self):
+        request_data = _predicted_order_book_request(
+            exchanges=[_bingx_exchange()],
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": BINGX_EXCHANGE_NAME,
+                            "pair": BINGX_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": "",
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_predicted_order_book(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    async def test_bingx_with_dexscreener_cross_pair_symbol_formula(self):
+        request_data = _predicted_order_book_request(
+            exchanges=[
+                _bingx_exchange(),
+                {
+                    "id": "dexscreener-config",
+                    "name": DEXSCREENER_EXCHANGE_NAME,
+                    "exchange": DEXSCREENER_EXCHANGE_NAME,
+                    "sandboxed": False,
+                },
+            ],
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": DEXSCREENER_EXCHANGE_NAME,
+                            "pair": BINGX_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": CROSS_PAIR_SYMBOL_FORMULA,
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_predicted_order_book(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    async def test_dexscreener_token_address_formula(self):
+        request_data = _predicted_order_book_request(
+            exchanges=[
+                _bingx_exchange(),
+                {
+                    "id": "dexscreener-config",
+                    "name": DEXSCREENER_EXCHANGE_NAME,
+                    "exchange": DEXSCREENER_EXCHANGE_NAME,
+                    "sandboxed": False,
+                },
+            ],
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": DEXSCREENER_EXCHANGE_NAME,
+                            "pair": DEX_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": CROSS_PAIR_ADDRESS_FORMULA,
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_predicted_order_book(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    async def test_dexscreener_direct_btcb_usdt(self):
+        request_data = _predicted_order_book_request(
+            exchanges=[
+                _bingx_exchange(),
+                {
+                    "id": "dexscreener-config",
+                    "name": DEXSCREENER_EXCHANGE_NAME,
+                    "exchange": DEXSCREENER_EXCHANGE_NAME,
+                    "sandboxed": False,
+                },
+            ],
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": DEXSCREENER_EXCHANGE_NAME,
+                            "pair": DEX_BTCB_USDT_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": "",
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_predicted_order_book(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    async def test_dexscreener_direct_btcb_usdt_any_dex(self):
+        request_data = _predicted_order_book_request(
+            exchanges=[
+                _bingx_exchange(),
+                {
+                    "id": "dexscreener-config",
+                    "name": DEXSCREENER_EXCHANGE_NAME,
+                    "exchange": DEXSCREENER_EXCHANGE_NAME,
+                    "sandboxed": False,
+                },
+            ],
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": DEXSCREENER_EXCHANGE_NAME,
+                            "pair": DEX_BTCB_USDT_ANY_DEX_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": "",
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_predicted_order_book(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    async def test_dexscreener_any_dex_cross_pair_address_formula(self):
+        request_data = _predicted_order_book_request(
+            exchanges=[
+                _bingx_exchange(),
+                {
+                    "id": "dexscreener-config",
+                    "name": DEXSCREENER_EXCHANGE_NAME,
+                    "exchange": DEXSCREENER_EXCHANGE_NAME,
+                    "sandboxed": False,
+                },
+            ],
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": DEXSCREENER_EXCHANGE_NAME,
+                            "pair": DEX_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": CROSS_PAIR_ANY_DEX_ADDRESS_FORMULA,
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_predicted_order_book(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    async def test_dexscreener_cross_pair_address_formula_with_unified_dex_reference_pair(self):
+        request_data = _predicted_order_book_request(
+            exchanges=[
+                _bingx_exchange(),
+                {
+                    "id": "dexscreener-config",
+                    "name": DEXSCREENER_EXCHANGE_NAME,
+                    "exchange": DEXSCREENER_EXCHANGE_NAME,
+                    "sandboxed": False,
+                },
+            ],
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": DEXSCREENER_EXCHANGE_NAME,
+                            "pair": DEX_BTCB_USDT_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": CROSS_PAIR_ADDRESS_FORMULA,
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_predicted_order_book(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    @skip_without_alchemy_api_key
+    async def test_bingx_with_alchemy_direct_weth_usdc(self):
+        request_data = _predicted_order_book_request(
+            exchanges=_bingx_and_alchemy_exchanges(),
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": ALCHEMY_EXCHANGE_NAME,
+                            "pair": ALCHEMY_WETH_USDC_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": "",
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_predicted_order_book(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    @skip_without_alchemy_api_key
+    async def test_bingx_with_alchemy_weth_usdc_address_formula(self):
+        request_data = _predicted_order_book_request(
+            exchanges=_bingx_and_alchemy_exchanges(),
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": ALCHEMY_EXCHANGE_NAME,
+                            "pair": ALCHEMY_WETH_USDC_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": ALCHEMY_WETH_USDC_ADDRESS_FORMULA,
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_predicted_order_book(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    @pytest.mark.parametrize(
+        "defillama_pair,reference_formula",
+        [
+            pytest.param(DEX_BTCB_USDT_ADDRESS_NO_DEX, "", id="direct_no_dex"),
+            pytest.param(DEX_BTCB_USDT_ADDRESS_ANY_DEX, "", id="direct_any_dex"),
+            pytest.param(
+                DEX_BTCB_USDT_ADDRESS_ANY_DEX,
+                CROSS_PAIR_ANY_DEX_ADDRESS_FORMULA,
+                id="cross_pair_address_formula",
+            ),
+        ],
+    )
+    async def test_defillama_predicted_order_book(self, defillama_pair, reference_formula):
+        request_data = _predicted_order_book_request(
+            exchanges=[_bingx_exchange(), _defillama_exchange()],
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": DEFILLAMA_EXCHANGE_NAME,
+                            "pair": defillama_pair,
+                            "weight": 1,
+                            "formula": reference_formula,
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_predicted_order_book(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+
+class TestDispatchMarketMakingRequestMarketMakingVolume:
+    async def test_bingx_with_bingx_price_source(self):
+        request_data = _market_making_volume_request(
+            exchanges=[_bingx_exchange()],
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": BINGX_EXCHANGE_NAME,
+                            "pair": BINGX_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": "",
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_market_making_volume(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    async def test_bingx_with_dexscreener_cross_pair_symbol_formula(self):
+        request_data = _market_making_volume_request(
+            exchanges=[
+                _bingx_exchange(),
+                {
+                    "id": "dexscreener-config",
+                    "name": DEXSCREENER_EXCHANGE_NAME,
+                    "exchange": DEXSCREENER_EXCHANGE_NAME,
+                    "sandboxed": False,
+                },
+            ],
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": DEXSCREENER_EXCHANGE_NAME,
+                            "pair": BINGX_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": CROSS_PAIR_SYMBOL_FORMULA,
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_market_making_volume(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    async def test_bingx_with_dexscreener_direct_wbtc_usdt_address_formula(self):
+        request_data = _market_making_volume_request(
+            exchanges=[
+                _bingx_exchange(),
+                {
+                    "id": "dexscreener-config",
+                    "name": DEXSCREENER_EXCHANGE_NAME,
+                    "exchange": DEXSCREENER_EXCHANGE_NAME,
+                    "sandboxed": False,
+                },
+            ],
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": DEXSCREENER_EXCHANGE_NAME,
+                            "pair": BINGX_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": DIRECT_WBTC_USDT_ADDRESS_FORMULA,
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_market_making_volume(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    @skip_without_alchemy_api_key
+    async def test_bingx_with_alchemy_direct_weth_usdc(self):
+        request_data = _market_making_volume_request(
+            exchanges=_bingx_and_alchemy_exchanges(),
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": ALCHEMY_EXCHANGE_NAME,
+                            "pair": ALCHEMY_WETH_USDC_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": "",
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_market_making_volume(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    @skip_without_alchemy_api_key
+    async def test_bingx_with_alchemy_weth_usdc_address_formula(self):
+        request_data = _market_making_volume_request(
+            exchanges=_bingx_and_alchemy_exchanges(),
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": ALCHEMY_EXCHANGE_NAME,
+                            "pair": ALCHEMY_WETH_USDC_TRADING_PAIR,
+                            "weight": 1,
+                            "formula": ALCHEMY_WETH_USDC_ADDRESS_FORMULA,
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_market_making_volume(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)
+
+    async def test_bingx_with_defillama_direct_btcb_usdt_no_dex(self):
+        request_data = _market_making_volume_request(
+            exchanges=[_bingx_exchange(), _defillama_exchange()],
+            pair_settings=[
+                _base_pair_settings(
+                    BINGX_TRADING_PAIR,
+                    BINGX_EXCHANGE_NAME,
+                    [
+                        {
+                            "exchange": DEFILLAMA_EXCHANGE_NAME,
+                            "pair": DEX_BTCB_USDT_ADDRESS_NO_DEX,
+                            "weight": 1,
+                            "formula": "",
+                        }
+                    ],
+                )
+            ],
+        )
+        body, status = await api_handlers.dispatch_market_making_request(request_data)
+        assert status == 200
+        _assert_successful_market_making_volume(body, BINGX_EXCHANGE_NAME, BINGX_TRADING_PAIR)

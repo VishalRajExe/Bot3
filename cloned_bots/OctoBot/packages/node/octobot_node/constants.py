@@ -1,0 +1,128 @@
+#  This file is part of OctoBot Node (https://github.com/Drakkar-Software/OctoBot-Node)
+#  Copyright (c) 2025 Drakkar-Software, All rights reserved.
+#
+#  OctoBot is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either
+#  version 3.0 of the License, or (at your option) any later version.
+#
+#  OctoBot is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public
+#  License along with OctoBot. If not, see <https://www.gnu.org/licenses/>.
+import os
+import uuid
+
+try:
+    import octobot.constants as octobot_constants
+    BASE_LOGS_FOLDER = octobot_constants.LOGS_FOLDER
+except ImportError:
+    BASE_LOGS_FOLDER = "logs"
+
+AUTOMATION_LOGS_FOLDER = f"{BASE_LOGS_FOLDER}/automations"
+_AUTOMATION_LOG_FILE_MAX_MIB = 10
+AUTOMATION_LOG_FILE_MAX_BYTES = int(
+    os.getenv(
+        "AUTOMATION_LOG_FILE_MAX_BYTES",
+        str(_AUTOMATION_LOG_FILE_MAX_MIB * 1024 * 1024),
+    )
+)
+AUTOMATION_LOG_FILE_TRIM_LINES_FRACTION = 0.2
+PARENT_WORKFLOW_ID_LENGTH = 36 # length of a UUID4
+
+# Max tasks returned per GET /api/v1/tasks/ page (UI fetches page=1 at this limit).
+TASKS_LIST_MAX_PAGE_LIMIT = 500
+
+# default to 19 retry after 1, 2.5, 4.75, 8.125, 13.188, ... 2953.784 seconds (total of 4430 seconds)
+AUTOMATION_WORKFLOW_RETRY_INTERVAL_SECONDS = float(os.getenv("AUTOMATION_WORKFLOW_RETRY_INTERVAL_SECONDS", 1.0))
+AUTOMATION_WORKFLOW_MAX_ITERATION_RETRIES = int(os.getenv("AUTOMATION_WORKFLOW_MAX_ITERATION_RETRIES", 19))
+AUTOMATION_WORKFLOW_BACKOFF_RATE = float(os.getenv("AUTOMATION_WORKFLOW_BACKOFF_RATE", 1.5))
+
+DEFAULT_WORKFLOW_RESCHEDULE_IN_SECONDS = 60.0 * 60.0 # 1 hour
+SCHEDULES_DEFAULT_BACKFILL_DAYS = 1
+
+NODE_API_STOP_TIMEOUT_SECONDS = float(os.getenv("NODE_API_STOP_TIMEOUT_SECONDS", "5.0"))
+
+# delay between authentication errors retry attempts of the current iteration (30 minutes)
+INVALID_AUTHENTICATION_RETRY_DELAY_SECONDS = float(os.getenv("INVALID_AUTHENTICATION_RETRY_DELAY_SECONDS", 1800))
+
+# default to 6 retries after 2, 4, 8, 16, ... 64 seconds (total of 126 seconds)
+USER_ACTION_WORKFLOW_RETRY_INTERVAL_SECONDS = float(os.getenv("USER_ACTION_WORKFLOW_RETRY_INTERVAL_SECONDS", 2))
+USER_ACTION_WORKFLOW_MAX_ITERATION_RETRIES = int(os.getenv("USER_ACTION_WORKFLOW_MAX_ITERATION_RETRIES", 6))
+USER_ACTION_WORKFLOW_BACKOFF_RATE = float(os.getenv("USER_ACTION_WORKFLOW_BACKOFF_RATE", 2))
+
+# run_octobot_process DSL recall interval and init-state timeout for child OctoBot spawns.
+RUN_OCTOBOT_PROCESS_WAITING_TIME_SECONDS = float(
+    os.getenv("RUN_OCTOBOT_PROCESS_WAITING_TIME_SECONDS", 60.0)
+)
+RUN_OCTOBOT_PROCESS_PING_TIMEOUT_SECONDS = float(
+    os.getenv("RUN_OCTOBOT_PROCESS_PING_TIMEOUT_SECONDS", 150.0)
+)
+
+# Max full trade dicts kept on automation.exchange_account_elements.trades; older ids archived in trade_summaries.
+AUTOMATION_LIVE_STATE_MAX_TRADES = 100
+
+TASKS_ENCRYPTION_ENV_VARS = [
+    "TASKS_SERVER_RSA_PRIVATE_KEY",
+    "TASKS_SERVER_ECDSA_PRIVATE_KEY",
+]
+
+FAILURE_ERROR_DETAILS_MAX_LENGTH = 8_000
+
+# Retry active automation workflow delivery while the child workflow is between DBOS workflows.
+AUTOMATION_WORKFLOW_ACTIVE_SEND_RETRY_SECONDS = float(
+    os.getenv(
+        "AUTOMATION_WORKFLOW_ACTIVE_SEND_RETRY_SECONDS",
+        os.getenv("STOP_AUTOMATION_DELIVERY_RETRY_SECONDS", 2.0),
+    )
+)
+AUTOMATION_WORKFLOW_ACTIVE_SEND_POLL_INTERVAL_SECONDS = float(
+    os.getenv(
+        "AUTOMATION_WORKFLOW_ACTIVE_SEND_POLL_INTERVAL_SECONDS",
+        os.getenv("STOP_AUTOMATION_DELIVERY_POLL_INTERVAL_SECONDS", 0.05),
+    )
+)
+
+DEFAULT_PORTFOLIO_VALUATION_UNIT = "USDT"
+
+GLOBAL_VIEW_AUTOMATION_TRIGGER_TIMEOUT_SECONDS = float(
+    os.getenv("GLOBAL_VIEW_AUTOMATION_TRIGGER_TIMEOUT_SECONDS", "300.0")
+)
+GLOBAL_VIEW_WORKFLOW_POLL_INTERVAL_SECONDS = float(
+    os.getenv("GLOBAL_VIEW_WORKFLOW_POLL_INTERVAL_SECONDS", "5")
+)
+
+NON_TRADING_GENERIC_PROCESS_OCTOBOT_STRATEGY_ID = "non-trading-generic-process-octobot-strategy"
+NON_TRADING_GENERIC_PROCESS_OCTOBOT_STRATEGY_VERSION = "1.0.0"
+
+USER_ACTION_WORKFLOW_RESULT_TIMEOUT_SECONDS = float(
+    os.getenv("USER_ACTION_WORKFLOW_RESULT_TIMEOUT_SECONDS", 120.0)
+)
+
+SIGNAL_EXECUTION_RESULT_TIMEOUT_SECONDS = float(
+    os.getenv("SIGNAL_EXECUTION_RESULT_TIMEOUT_SECONDS", USER_ACTION_WORKFLOW_RESULT_TIMEOUT_SECONDS)
+)
+
+SIGNAL_EXECUTION_RESULT_RECV_POLL_INTERVAL_SECONDS = float(
+    os.getenv("SIGNAL_EXECUTION_RESULT_RECV_POLL_INTERVAL_SECONDS", 0.05)
+)
+
+SCHEDULER_EXECUTOR_ID = str(uuid.uuid4()) # unique for each worker
+
+# Stable DBOS application_version for workflow recovery across OctoBot releases.
+# Bump only when workflow step order/semantics change in a breaking way.
+# WARNING: changing this value requires an explicit migration process — ask for confirmation before bumping.
+SCHEDULER_APPLICATION_VERSION = "octobot_node_v1"
+ALWAYS_ENSURE_SCHEDULER_APPLICATION_VERSION = bool((
+    os.getenv("ALWAYS_ENSURE_SCHEDULER_APPLICATION_VERSION") or "false"
+).lower() == "true")
+# DBOS cron schedules (dbos cleanup, global view refresh, portfolio history).
+# Env: ENABLE_SCHEDULED_WORKFLOWS (default on unless set to "false").
+# When false: on scheduler init, existing schedules are deleted and not re-registered (no new cron triggers).
+# Does not cancel workflows already enqueued or running. Read at import; restart required to apply.
+ENABLE_SCHEDULED_WORKFLOWS = bool((
+    os.getenv("ENABLE_SCHEDULED_WORKFLOWS") or "true"
+).lower() != "false")

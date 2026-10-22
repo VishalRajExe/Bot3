@@ -1,0 +1,402 @@
+from typing import List, Optional
+
+import numpy as np
+from peewee import Cast
+
+import jesse.helpers as jh
+from jesse.config import config
+from jesse.enums import order_statuses, sides
+from jesse.models.ClosedTrade import ClosedTrade
+from jesse.models.Order import Order
+from jesse.services.db import database
+
+
+def _ensure_db_open() -> None:
+    if not database.is_open():
+        database.open_connection()
+
+
+def history_transaction():
+    _ensure_db_open()
+    return database.db.atomic()
+
+
+def attach_executed_orders(trade: ClosedTrade, orders: list) -> ClosedTrade:
+    """Hydrate model calculations from a complete executed-order selection, without querying."""
+    trade.orders = orders
+    # Hydration is repeatable: callers may refresh the same model instance.
+    trade.buy_orders.flush()
+    trade.sell_orders.flush()
+    for order in orders:
+        if order.side == sides.BUY:
+            trade.buy_orders.append(np.array([abs(order.filled_qty), order.price]))
+        elif order.side == sides.SELL:
+            trade.sell_orders.append(np.array([abs(order.filled_qty), order.price]))
+    return trade
+
+
+def populate_order_arrays(trade: ClosedTrade) -> ClosedTrade:
+    """
+    Populate buy_orders and sell_orders arrays from the Order table.
+    This is needed when loading trades from the database so that computed
+    properties like entry_price, exit_price, qty, pnl, etc. work correctly.
+    """
+    from jesse.repositories import order_repository
+    orders = list(order_repository.executed_for_trades_query([trade.id]).order_by(Order.executed_at, Order.id))
+    return attach_executed_orders(trade, orders)
+
+
+def find_by_id(trade_id: str, strict: bool = False) -> Optional[ClosedTrade]:
+    if jh.is_unit_testing():
+        return None
+
+    _ensure_db_open()
+
+    try:
+        trade = ClosedTrade.select().where(ClosedTrade.id == trade_id).first()
+        # add orders to trade
+        if trade:
+            populate_order_arrays(trade)
+        return trade
+    except Exception:
+        if strict or database.db.in_transaction():
+            raise
+        return None
+
+
+def find_by_session_id(
+    session_id: str,
+    limit: Optional[int] = None,
+    offset: int = 0,
+) -> List[ClosedTrade]:
+    if jh.is_unit_testing():
+        return []
+
+    _ensure_db_open()
+
+    query = (
+        ClosedTrade.select()
+        .where(ClosedTrade.session_id == session_id)
+        # Sort by: open trades first (closed_at IS NULL), then by most recent opened_at
+        .order_by(
+            ClosedTrade.closed_at.is_null(False),
+            ClosedTrade.opened_at.desc(),
+            ClosedTrade.id.desc(),
+        )
+    )
+    
+    if limit is not None:
+        query = query.limit(limit)
+
+    if offset:
+        query = query.offset(offset)
+    
+    trades = list(query)
+    for trade in trades:
+        populate_order_arrays(trade)
+    return trades
+
+
+def create(trade_data: dict) -> Optional[ClosedTrade]:
+    if jh.is_unit_testing():
+        return None
+
+    _ensure_db_open()
+
+    d = {
+        "id": trade_data.get("id"),
+        "session_id": trade_data.get("session_id"),
+        "strategy_name": trade_data.get("strategy_name"),
+        "symbol": trade_data.get("symbol"),
+        "exchange": trade_data.get("exchange"),
+        "type": trade_data.get("type"),
+        "timeframe": trade_data.get("timeframe"),
+        "leverage": trade_data.get("leverage"),
+        "created_at": trade_data.get("created_at", jh.now_to_timestamp()),
+        "updated_at": trade_data.get("updated_at", jh.now_to_timestamp()),
+        "session_mode": config["app"]["trading_mode"],
+        "opened_at": trade_data.get("opened_at"),
+    }
+
+    if trade_data.get("closed_at") is not None:
+        d["closed_at"] = trade_data.get("closed_at")
+
+    try:
+        ClosedTrade.insert(**d).execute()
+        return ClosedTrade.get(ClosedTrade.id == d["id"])
+    except Exception as e:
+        try:
+            database.db.rollback()
+        except Exception:
+            pass
+        jh.dump(f"Error storing closed trade in database: {e}")
+        raise
+
+
+def update(trade: ClosedTrade) -> None:
+    if jh.is_unit_testing():
+        return
+
+    _ensure_db_open()
+
+    d = {
+        "updated_at": jh.now_to_timestamp(),
+    }
+    
+    if trade.closed_at is not None:
+        d["closed_at"] = trade.closed_at
+    if trade.opened_at is not None:
+        d['opened_at'] = trade.opened_at
+
+    try:
+        ClosedTrade.update(**d).where(ClosedTrade.id == trade.id).execute()
+    except Exception as e:
+        if database.db.in_transaction():
+            raise
+        try:
+            database.db.rollback()
+        except Exception:
+            pass
+        jh.dump(f"Error updating closed trade in database: {e}")
+        raise
+
+
+def store_or_update(trade: ClosedTrade) -> None:
+    if jh.is_unit_testing():
+        return
+
+    _ensure_db_open()
+
+    db_trade = ClosedTrade.select().where(ClosedTrade.id == trade.id).first()
+    if db_trade:
+        update(trade)
+        return
+
+    d = {
+        "id": trade.id,
+        "session_id": trade.session_id,
+        "strategy_name": trade.strategy_name,
+        "symbol": trade.symbol,
+        "exchange": trade.exchange,
+        "type": trade.type,
+        "timeframe": trade.timeframe,
+        "leverage": trade.leverage,
+        "created_at": trade.created_at if hasattr(trade, "created_at") and trade.created_at else jh.now_to_timestamp(),
+        "updated_at": trade.updated_at if hasattr(trade, "updated_at") and trade.updated_at else jh.now_to_timestamp(),
+        "session_mode": config["app"]["trading_mode"],
+        "opened_at": trade.opened_at,
+    }
+
+    if trade.closed_at is not None:
+        d["closed_at"] = trade.closed_at
+
+    try:
+        ClosedTrade.insert(**d).execute()
+    except Exception as e:
+        if database.db.in_transaction():
+            raise
+        try:
+            database.db.rollback()
+        except Exception:
+            pass
+        jh.dump(f"Error storing closed trade in database: {e}")
+
+
+def close_trade(trade: ClosedTrade, opened_at: int = None) -> None:
+    if jh.is_unit_testing():
+        return
+
+    _ensure_db_open()
+
+    # When there is no database available (e.g. research/backtest sessions running
+    # outside a Jesse project), open_connection() is a no-op and the query below
+    # would always raise ("Query must be bound to a database") and noisily dump the
+    # error for every single closed trade. Skip the write in exactly those cases.
+    if not database.is_open():
+        return
+
+    d = {
+        "closed_at": trade.closed_at if trade.closed_at else jh.now_to_timestamp(),
+        "updated_at": jh.now_to_timestamp(),
+    }
+    if opened_at:
+        d["opened_at"] = opened_at
+    try:
+        ClosedTrade.update(**d).where(ClosedTrade.id == trade.id).execute()
+    except Exception as e:
+        try:
+            database.db.rollback()
+        except Exception:
+            pass
+        jh.dump(f"Error closing trade in database: {e}")
+
+
+def disable_trade(trade_id: str) -> None:
+    if jh.is_unit_testing():
+        return
+
+    _ensure_db_open()
+
+    d = {
+        "soft_deleted_at": jh.now_to_timestamp(),
+    }
+    ClosedTrade.update(**d).where(ClosedTrade.id == trade_id).execute()
+
+
+def history_query(
+    *, id_search=None, status_filter=None, symbol_filter=None, exchange_filter=None,
+    type_filter=None, exact_match=False, session_id=None, session_modes=None,
+    time_field='opened_at', start_ms=None, end_ms=None, include_soft_deleted=True,
+):
+    """Build an unexecuted history selection; the caller owns ordering, paging and transactions.
+
+    Dashboard searches use substring matching and include open/soft-deleted rows by default.
+    Explicit options let analysis select exact scopes and a half-open timestamp window without
+    changing that dashboard contract. Only trusted, validated timestamp field names are accepted.
+    """
+    if time_field not in ('opened_at', 'closed_at'):
+        raise ValueError('Unsupported trade history timestamp field')
+    query = ClosedTrade.select()
+    if id_search:
+        query = query.where(Cast(ClosedTrade.id, 'text').contains(id_search) |
+                            Cast(ClosedTrade.session_id, 'text').contains(id_search))
+    if status_filter == 'open':
+        query = query.where(ClosedTrade.closed_at.is_null(True))
+    elif status_filter == 'closed':
+        query = query.where(ClosedTrade.closed_at.is_null(False))
+    for column, value in ((ClosedTrade.symbol, symbol_filter), (ClosedTrade.exchange, exchange_filter),
+                          (ClosedTrade.type, type_filter)):
+        if value:
+            query = query.where(column == value if exact_match else column.contains(value))
+    if session_id is not None:
+        query = query.where(ClosedTrade.session_id == session_id)
+    if session_modes is not None:
+        query = query.where(ClosedTrade.session_mode.in_(session_modes))
+    if not include_soft_deleted:
+        query = query.where(ClosedTrade.soft_deleted_at.is_null(True))
+    column = getattr(ClosedTrade, time_field)
+    if start_ms is not None:
+        query = query.where(column >= start_ms)
+    if end_ms is not None:
+        query = query.where(column < end_ms)
+    return query
+
+
+def find_by_filters(
+    id_search: str = None,
+    status_filter: str = None,
+    symbol_filter: str = None,
+    date_filter: str = None,
+    exchange_filter: str = None,
+    type_filter: str = None,
+    limit: int = 50,
+    offset: int = 0
+) -> List[ClosedTrade]:
+    if jh.is_unit_testing():
+        return []
+
+    _ensure_db_open()
+
+    # If a previous query failed, the connection can be left in an aborted transaction state.
+    # Rolling back here ensures subsequent SELECTs work.
+    try:
+        database.db.rollback()
+    except Exception:
+        pass
+
+    start_ms = None
+    if date_filter:
+        cutoff_timestamp = jh.now_to_timestamp()
+        if date_filter == '7_days':
+            cutoff_timestamp -= 7 * 24 * 60 * 60 * 1000
+        elif date_filter == '30_days':
+            cutoff_timestamp -= 30 * 24 * 60 * 60 * 1000
+        elif date_filter == '90_days':
+            cutoff_timestamp -= 90 * 24 * 60 * 60 * 1000
+        
+        if date_filter != 'all_time':
+            start_ms = cutoff_timestamp
+
+    query = history_query(id_search=id_search, status_filter=status_filter, symbol_filter=symbol_filter,
+                          exchange_filter=exchange_filter, type_filter=type_filter, start_ms=start_ms)
+
+    query = query.order_by(ClosedTrade.closed_at.is_null(False), ClosedTrade.opened_at.desc()).limit(limit).offset(offset)
+
+    try:
+        trades = list(query)
+        for trade in trades:
+            populate_order_arrays(trade)
+        return trades
+    except Exception:
+        # Ensure we don't poison the connection for subsequent requests.
+        try:
+            database.db.rollback()
+        except Exception:
+            pass
+        raise
+
+
+def get_open_trade(exchange_name: str, symbol: str, is_initial: bool = False) -> Optional[ClosedTrade]:
+    if jh.is_unit_testing():
+        return None
+
+    _ensure_db_open()
+
+    trade = (
+        ClosedTrade.select()
+        .where(ClosedTrade.soft_deleted_at == None)
+        .where(ClosedTrade.session_mode == "livetrade")
+        .where(ClosedTrade.exchange == exchange_name)
+        .where(ClosedTrade.symbol == symbol)
+        .where(ClosedTrade.closed_at == None)
+        .order_by(ClosedTrade.opened_at.desc())
+        .first()
+    )
+
+    if trade is None or not is_initial:
+        return trade
+
+    hydrate_executed_orders(trade)
+    # No executed rows still requires exchange-history reconciliation; it does
+    # not establish that the persisted trade is flat or simulated.
+    if trade.is_simulated or (len(trade.buy_orders) == 0 and len(trade.sell_orders) == 0):
+        return trade
+
+    if trade.current_qty == 0:
+        close_trade(trade)
+        return None
+    else:
+        return trade
+
+
+def hydrate_executed_orders(trade: ClosedTrade) -> None:
+    """
+    Load a saved trade's executed orders: exchange orders become trade.orders (they carry the
+    fees), and both exchange and simulated orders (the startup position adjustments) feed the
+    qty/price arrays. Shared by restart reconciliation and in-memory trade restoration.
+    """
+    exchange_orders = list(
+        Order.select()
+        .where(Order.trade_id == trade.id)
+        .where(Order.status == order_statuses.EXECUTED)
+        .where(Order.order_exist_in_exchange == True)
+        .order_by(Order.executed_at)
+    )
+    simulated_orders = list(
+        Order.select()
+        .where(Order.trade_id == trade.id)
+        .where(Order.status == order_statuses.EXECUTED)
+        .where(Order.order_exist_in_exchange == False)
+        .order_by(Order.executed_at)
+    )
+    # Reconciliation may reload after inserting a synthetic quantity adjustment.
+    # Replace the snapshot instead of appending duplicate fills on each reload.
+    trade.buy_orders.flush()
+    trade.sell_orders.flush()
+    trade.orders = [order for order in exchange_orders if order.exchange_id]
+    trade.is_simulated = not exchange_orders and bool(simulated_orders)
+    for o in exchange_orders + simulated_orders:
+        if o.side == sides.BUY:
+            trade.buy_orders.append(np.array([abs(o.filled_qty), o.price]))
+        elif o.side == sides.SELL:
+            trade.sell_orders.append(np.array([abs(o.filled_qty), o.price]))

@@ -1,0 +1,104 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useNavigate } from "@tanstack/react-router"
+import { useEffect } from "react"
+
+import { type ApiError, type User, UsersService } from "@/client"
+import { clearPassword, savePassword } from "@/lib/device-key"
+import { verifyLoginCredentials } from "@/lib/verify-login-credentials"
+import { setStoredIsSuperuser } from "@/lib/user-menu-display"
+
+export const clearAuth = async () => {
+  localStorage.removeItem("auth_username")
+  localStorage.removeItem("auth_wallet_name")
+  setStoredIsSuperuser(false)
+  await clearPassword()
+}
+
+import { shouldSuppressLoginErrorToast } from "@/lib/auth-error-messages"
+import { handleError } from "@/utils"
+import useCustomToast from "./useCustomToast"
+
+export type LoginCredentials = {
+  username: string
+  password: string
+}
+
+const isLoggedIn = () => {
+  return localStorage.getItem("auth_username") !== null
+}
+
+const useAuth = () => {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { showErrorToast } = useCustomToast()
+
+  const { data: user, isPending } = useQuery<User | null, Error>({
+    queryKey: ["currentUser"],
+    queryFn: UsersService.readUserMe,
+    enabled: isLoggedIn(),
+  })
+
+  useEffect(() => {
+    if (!user) {
+      return
+    }
+    setStoredIsSuperuser(user.is_superuser === true)
+    if (user.full_name) {
+      localStorage.setItem("auth_wallet_name", user.full_name)
+    } else {
+      localStorage.removeItem("auth_wallet_name")
+    }
+  }, [user])
+
+  const login = async (data: LoginCredentials) => {
+    try {
+      const loggedInUser = await verifyLoginCredentials(
+        data.username,
+        data.password,
+      )
+      // Only persist session after the node accepts the passphrase.
+      await savePassword(data.password)
+      localStorage.setItem("auth_username", loggedInUser.email)
+      // Store wallet display name for header/menu
+      if (loggedInUser.full_name) {
+        localStorage.setItem("auth_wallet_name", loggedInUser.full_name)
+      } else {
+        localStorage.removeItem("auth_wallet_name")
+      }
+      setStoredIsSuperuser(loggedInUser.is_superuser === true)
+    } catch (err) {
+      // Clean up before propagating so isLoggedIn() never returns true for failed logins
+      await clearAuth()
+      throw err
+    }
+  }
+
+  const loginMutation = useMutation({
+    mutationFn: login,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] })
+      navigate({ to: "/" })
+    },
+    onError: (error) => {
+      // clearAuth() already called inside login() before re-throwing
+      if (!shouldSuppressLoginErrorToast(error)) {
+        handleError.bind(showErrorToast)(error as ApiError)
+      }
+    },
+  })
+
+  const logout = async () => {
+    await clearAuth()
+    navigate({ to: "/login" })
+  }
+
+  return {
+    loginMutation,
+    logout,
+    user,
+    isCurrentUserPending: isLoggedIn() && isPending,
+  }
+}
+
+export { isLoggedIn }
+export default useAuth
